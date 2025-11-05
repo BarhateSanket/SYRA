@@ -38,21 +38,62 @@ return res.status(200).json(user)
 }
 
 
+export const contactForm=async (req,res)=>{
+    try {
+        const {name,email,subject,message}=req.body
+        console.log("Contact form submission:", {name,email,subject,message})
+
+        // Here you would typically send email or save to database
+        // For now, we'll just log and return success
+
+        return res.status(200).json({
+            success:true,
+            message:"Message sent successfully",
+            data:{name,email,subject}
+        })
+    } catch (error) {
+        console.error("Contact form error:", error)
+        return res.status(500).json({
+            success:false,
+            message:"Failed to send message"
+        })
+    }
+}
+
 export const askToAssistant=async (req,res)=>{
-   try {
-      const {command}=req.body
-      const user=await User.findById(req.userId);
-      user.history.push(command)
-      user.save()
-      const userName=user.name
-      const assistantName=user.assistantName
-      const result=await geminiResponse(command,assistantName,userName)
+    try {
+       const {command}=req.body
+       console.log("Received command:", command);
+       const user=await User.findById(req.userId);
+       if (!user) {
+         return res.status(404).json({ response: "User not found" });
+       }
+       user.history.push(command)
+       await user.save()
+       const userName=user.name
+       const assistantName=user.assistantName
+       console.log("Calling Gemini with:", { command, assistantName, userName });
+       const result=await geminiResponse(command,assistantName,userName)
+       console.log("Gemini raw result:", result);
+
+       if (!result) {
+           console.error("Gemini response is null/undefined");
+           return res.status(500).json({ response: "Failed to get response from Gemini" });
+       }
 
       const jsonMatch=result.match(/{[\s\S]*}/)
+      console.log("JSON match result:", jsonMatch);
       if(!jsonMatch){
-         return res.ststus(400).json({response:"sorry, i can't understand"})
+         console.error("No JSON found in Gemini response");
+         return res.status(400).json({response:"sorry, i can't understand"})
       }
-      const gemResult=JSON.parse(jsonMatch[0])
+      let gemResult;
+      try {
+          gemResult = JSON.parse(jsonMatch[0]);
+      } catch (parseError) {
+          console.error("JSON parse error:", parseError);
+          return res.status(400).json({ response: "Invalid response format from assistant" });
+      }
       console.log(gemResult)
       const type=gemResult.type
 
@@ -101,6 +142,7 @@ export const askToAssistant=async (req,res)=>{
      
 
    } catch (error) {
-  return res.status(500).json({ response: "ask assistant error" })
+  console.error("Ask assistant error:", error);
+  return res.status(500).json({ response: "ask assistant error", error: error.message })
    }
 }

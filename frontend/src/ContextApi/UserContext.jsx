@@ -13,17 +13,20 @@ function UserContext({children}) {
             setUserData(result.data)
             console.log(result.data)
         } catch (error) {
-            console.log(error)
+            console.log("Current user error:", error.response?.status, error.response?.data)
+            setUserData(null)
         }
     }
 
     const getGeminiResponse=async (command)=>{
-try {
-  const result=await axios.post(`${serverUrl}/api/user/asktoassistant`,{command},{withCredentials:true})
-  return result.data
-} catch (error) {
-  console.log(error)
-}
+ try {
+   const result=await axios.post(`${serverUrl}/api/user/asktoassistant`,{command},{withCredentials:true})
+   console.log("API Response:", result.data);
+   return result.data
+ } catch (error) {
+   console.log("API Error:", error)
+   return null
+ }
     }
 
     useEffect(()=>{

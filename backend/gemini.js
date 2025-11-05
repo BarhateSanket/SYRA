@@ -2,7 +2,7 @@ import axios from "axios"
 const geminiResponse=async (command,assistantName,userName)=>{
 try {
     const apiUrl=process.env.GEMINI_API_URL
-    const prompt = `You are a virtual assistant named ${assistantName} created by ${userName}. 
+    const prompt = `You are a virtual assistant named ${assistantName} created by ${userName}.
 You are not Google. You will now behave like a voice-enabled assistant.
 
 Your task is to understand the user's natural language input and respond with a JSON object like this:
@@ -28,32 +28,42 @@ Type meanings:
 - "calculator-open": if user wants to  open a calculator .
 - "instagram-open": if user wants to  open instagram .
 - "facebook-open": if user wants to open facebook.
--"weather-show": if user wants to know weather
+ -"weather-show": if user wants to know weather
 - "get-time": if user asks for current time.
 - "get-date": if user asks for today's date.
 - "get-day": if user asks what day it is.
 - "get-month": if user asks for the current month.
 
 Important:
-- Use ${userName} agar koi puche tume kisne banaya 
+- Use ${userName} agar koi puche tume kisne banaya
 - Only respond with the JSON object, nothing else.
 
 
 now your userInput- ${command}
 `;
 
-
-
-
-
+    console.log("Making Gemini API call to:", apiUrl);
+    console.log("Request payload:", {
+    "contents": [{
+    "parts":[{"text": prompt}]
+    }]
+    });
     const result=await axios.post(apiUrl,{
     "contents": [{
     "parts":[{"text": prompt}]
     }]
     })
+    console.log("Gemini API response status:", result.status);
+    console.log("Gemini API response:", result.data);
+    if (!result.data || !result.data.candidates || !result.data.candidates[0]) {
+      console.error("Invalid Gemini API response structure:", result.data);
+      throw new Error("Invalid Gemini API response");
+    }
 return result.data.candidates[0].content.parts[0].text
 } catch (error) {
-    console.log(error)
+    console.error("Gemini API error:", error.response?.status, error.response?.data);
+    console.error("Error details:", error.message);
+    return null
 }
 }
 
