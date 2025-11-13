@@ -259,7 +259,7 @@ npm run dev
 
 4. **Access the application**
 - Frontend: http://:5174
-- Backend API: http://:5000
+- Backend API: http://localhost:5000
 
 ---
 
