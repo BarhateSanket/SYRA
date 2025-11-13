@@ -13,7 +13,7 @@ function Header() {
 
   const handleLogOut = async () => {
     try {
-      const result = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/auth/logout`, {
+      const result = await fetch(`${import.meta.env.VITE_API_URL || 'https://syra-jaeg.onrender.com'}/api/auth/logout`, {
         method: 'GET',
         credentials: 'include'
       });

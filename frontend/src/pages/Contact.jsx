@@ -74,7 +74,7 @@ function Contact() {
 
     try {
       // Simulate API call - replace with actual backend integration
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/contact`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'https://syra-jaeg.onrender.com'}/api/contact`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
