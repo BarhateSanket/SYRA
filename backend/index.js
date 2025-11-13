@@ -11,7 +11,7 @@ import geminiResponse from "./gemini.js"
 
 const app=express()
 app.use(cors({
-    origin:"https://syra-voice.vercel.app",
+    origin:"https://syra-voice.vercel.app/signup",
     credentials:true
 }))
 const port=process.env.PORT || 5000
