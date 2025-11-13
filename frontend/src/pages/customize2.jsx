@@ -119,18 +119,18 @@ function Customize2() {
         try {
             let formData=new FormData()
             formData.append("assistantName",assistantName)
-           if (backendImage) {
-  // User uploaded image → send file
-  formData.append("assistantImage", backendImage)
-
+          if (backendImage) {
+    // User uploaded an image → send file
+    formData.append("assistantImage", backendImage);
 } else {
-  // Built-in selected image → convert URL → file
-  const response = await fetch(selectedImage)
-  const blob = await response.blob()
-  const file = new File([blob], "assistantImage.jpg", { type: blob.type })
+    // Predefined image → convert to file
+    const response = await fetch(selectedImage);
+    const blob = await response.blob();
+    const file = new File([blob], "selectedImage.jpg", { type: blob.type });
 
-  formData.append("assistantImage", file)
+    formData.append("assistantImage", file);
 }
+
 
             const result=await axios.post(`${serverUrl}/api/user/update`,formData,{withCredentials:true})
             setLoading(false)
