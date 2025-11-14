@@ -58,6 +58,19 @@ function Home() {
   }
 
   const speak=(text)=>{
+    // Check if speech synthesis is supported and allowed
+    if (!('speechSynthesis' in window)) {
+      console.warn("Speech synthesis not supported");
+      setAiText(text);
+      setTimeout(() => {
+        setAiText("");
+        setTimeout(() => {
+          startRecognition();
+        }, 800);
+      }, 2000);
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
 
     // Parse voice setting to get language and gender preference
