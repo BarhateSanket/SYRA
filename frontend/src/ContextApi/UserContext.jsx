@@ -24,8 +24,13 @@ function UserContext({children}) {
    console.log("API Response:", result.data);
    return result.data
  } catch (error) {
-   console.log("API Error:", error)
-   return null
+   console.log("API Error:", error.response?.status, error.response?.data)
+   // Return a fallback response instead of null
+   return {
+     type: "general",
+     userInput: command,
+     response: "I'm experiencing some technical difficulties right now. Please try again in a moment."
+   }
  }
     }
 
