@@ -30,32 +30,35 @@ export const updateAssistant = async (req, res) => {
       return res.status(400).json({ message: "Assistant name is required" });
     }
 
-    let assistantImage;
+    // Fetch current user
+    const user = await User.findById(req.userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    // If user uploaded a file → multer handles req.file
+    let assistantImage = user.assistantImage;  // keep old image by default
+
+    // If user uploaded a new image
     if (req.file) {
-      const uploaded = await uploadOnCloudinary(req.file.path);
-      assistantImage = uploaded?.url;
+      const uploadedUrl = await uploadOnCloudinary(req.file.path);
+      assistantImage = uploadedUrl;   // replace image
     }
 
-    // If frontend sends no uploaded image & no converted file
-    if (!assistantImage) {
-      return res.status(400).json({ message: "Assistant image is required" });
-    }
-
-    const user = await User.findByIdAndUpdate(
+    // Update user
+    const updatedUser = await User.findByIdAndUpdate(
       req.userId,
       { assistantName, assistantImage },
       { new: true }
     ).select("-password");
 
-    return res.status(200).json(user);
+    return res.status(200).json(updatedUser);
 
   } catch (error) {
-    console.error(error);
-    return res.status(500).json({ message: "updateAssistantError user error", error });
+    console.error("updateAssistant error:", error);
+    return res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 };
+
 
 
 
