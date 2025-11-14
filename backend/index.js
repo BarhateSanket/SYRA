@@ -10,10 +10,18 @@ import geminiResponse from "./gemini.js"
 
 
 const app=express()
+
+app.set("trust proxy", 1);
 app.use(cors({
-    origin:"https://syra-voice.vercel.app",
-    credentials:true
-}))
+    origin: [
+        "http://localhost:5173",
+        "https://syra-voice.vercel.app"
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"]
+}));
+
 const port=process.env.PORT || 5000
 app.use(express.json())
 app.use(cookieParser())
