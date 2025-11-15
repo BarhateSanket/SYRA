@@ -110,7 +110,9 @@ function Customize2() {
         }))
     }
 
-    // FINAL FIXED UPDATE FUNCTION
+    // ********************************************************************
+    // ✅ FINAL FIXED UPDATE FUNCTION — NO "file is not defined" EVER AGAIN
+    // ********************************************************************
     const handleUpdateAssistant = async () => {
         setLoading(true)
         try {
@@ -118,20 +120,14 @@ function Customize2() {
             let formData = new FormData()
             formData.append("assistantName", assistantName)
 
-            // Case 1 — New Image (File)
+            // Upload only if user selects a NEW FILE
             if (selectedImage instanceof File) {
                 formData.append("assistantImage", selectedImage)
             }
 
-            // Case 2 — Existing backend image (URL)
-            else if (backendImage) {
-                formData.append("assistantImage", file);
-            }
-
-            // Case 3 — selectedImage URL string
-            else if (typeof selectedImage === "string") {
-                formData.append("assistantImage", file);
-            }
+            // If selectedImage is a URL or backendImage exists:
+            // ❌ DO NOT upload image
+            // Backend keeps existing image automatically
 
             const result = await axios.post(
                 `${serverUrl}/api/user/update`,
@@ -147,7 +143,6 @@ function Customize2() {
             setLoading(false)
             setUserData(result.data)
 
-            // Save voice setting
             localStorage.setItem('syraVoiceSettings', JSON.stringify(voiceSettings))
 
             navigate("/")
@@ -174,17 +169,12 @@ function Customize2() {
 
     return (
         <div className='w-full min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex justify-center items-center flex-col p-[20px] relative overflow-hidden'>
-            {/* UI unchanged… */}
-            {/* Entire UI structure remains same as your code */}
-            {/* I only fixed backend logic, not UI */}
-            
-            {/* BACK BUTTON */}
+
             <MdKeyboardBackspace
                 className='absolute top-[20px] sm:top-[30px] left-[20px] sm:left-[30px] text-white cursor-pointer w-[20px] h-[20px] sm:w-[25px] sm:h-[25px] hover:scale-110 transition-transform z-20'
                 onClick={() => navigate("/customize")}
             />
 
-            {/* STEPS INDICATOR */}
             <div className='absolute top-[20px] left-1/2 transform -translate-x-1/2 z-20'>
                 <div className='flex items-center gap-2'>
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${currentStep >= 1 ? 'bg-purple-400 text-white' : 'bg-white/20 text-white/60'}`}>
@@ -197,7 +187,6 @@ function Customize2() {
                 </div>
             </div>
 
-            {/* MAIN CONTENT */}
             <div className='w-full max-w-2xl relative z-20'>
                 {currentStep === 1 && (
                     <div className='text-center'>
