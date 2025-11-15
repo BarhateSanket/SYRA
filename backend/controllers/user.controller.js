@@ -19,21 +19,21 @@ return res.status(400).json({message:"user not found"})
 export const updateAssistant=async (req,res)=>{
    try {
       const {assistantName,imageUrl}=req.body
-      let assistantImage;
-if(req.file){
-   assistantImage=await uploadOnCloudinary(req.file.path)
-}else{
-   assistantImage=imageUrl
-}
+      const updateData = { assistantName };
 
-const user=await User.findByIdAndUpdate(req.userId,{
-   assistantName,assistantImage
-},{new:true}).select("-password")
-return res.status(200).json(user)
+      if(req.file){
+         updateData.assistantImage = await uploadOnCloudinary(req.file.path)
+      } else if(imageUrl){
+         updateData.assistantImage = imageUrl
+      }
+      // If neither file nor imageUrl, preserve existing assistantImage
 
-      
+      const user=await User.findByIdAndUpdate(req.userId, updateData, {new:true}).select("-password")
+      return res.status(200).json(user)
+
+
    } catch (error) {
-       return res.status(400).json({message:"updateAssistantError user error"}) 
+       return res.status(400).json({message:"updateAssistantError user error"})
    }
 }
 

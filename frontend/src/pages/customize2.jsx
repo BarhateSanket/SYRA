@@ -6,10 +6,11 @@ import { FaPlay, FaCheck, FaArrowRight, FaArrowLeft } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 
 function Customize2() {
+
     const {
         userData,
         backendImage,
-        selectedImage,        // may be File or blob URL
+        selectedImage,
         serverUrl,
         setUserData
     } = useContext(userDataContext)
@@ -28,41 +29,38 @@ function Customize2() {
     const [isPlaying, setIsPlaying] = useState(false)
 
     // -----------------------------
-    // IMAGE HANDLING FIX START
+    // IMAGE HANDLING
     // -----------------------------
     const [previewUrl, setPreviewUrl] = useState(null)
-    const [uploadFile, setUploadFile] = useState(null) // real File for upload
+    const [uploadFile, setUploadFile] = useState(null)
 
     useEffect(() => {
-        // CASE 1 → User selected a NEW FILE
+        // If user selected a new File
         if (selectedImage instanceof File) {
             setUploadFile(selectedImage)
-            const blobUrl = URL.createObjectURL(selectedImage)
-            setPreviewUrl(blobUrl)
-            return () => URL.revokeObjectURL(blobUrl)
+            const url = URL.createObjectURL(selectedImage)
+            setPreviewUrl(url)
+            return
         }
 
-        // CASE 2 → selectedImage is a blob or URL string
+        // If user selected a blob URL or frontend URL
         if (typeof selectedImage === "string") {
             setUploadFile(null)
             setPreviewUrl(selectedImage)
             return
         }
 
-        // CASE 3 → backend image exists
+        // If backend image exists
         if (backendImage) {
             setUploadFile(null)
             setPreviewUrl(backendImage)
             return
         }
 
-        // CASE 4 → nothing selected
         setUploadFile(null)
         setPreviewUrl(null)
+
     }, [selectedImage, backendImage])
-    // -----------------------------
-    // IMAGE HANDLING FIX END
-    // -----------------------------
 
     const voiceOptions = [
         { id: 'hi-IN-male', name: 'Hindi Male', lang: 'Hindi', gender: 'Male', flag: '🇮🇳', sample: 'नमस्ते! मैं आपकी मदद करने के लिए तैयार हूं।' },
@@ -77,19 +75,17 @@ function Customize2() {
         if (isPlaying) return
         setIsPlaying(true)
 
-        const utterance = new SpeechSynthesisUtterance()
         const voiceOption = voiceOptions.find(v => v.id === voiceId)
-        if (voiceOption) utterance.text = voiceOption.sample
+        const utterance = new SpeechSynthesisUtterance()
+        utterance.text = voiceOption?.sample || "Hello"
 
         const [lang, gender] = voiceId.split('-')
-        const voiceLang = lang + (lang.includes('-') ? '' : '-' + (lang === 'en' ? 'US' : 'IN'))
-        utterance.lang = voiceLang
-
+        utterance.lang = lang === "en" ? "en-US" : "hi-IN"
         utterance.pitch = gender === "male" ? 0.7 : 1.3
         utterance.rate = gender === "male" ? 0.8 : 1.1
 
         const voices = window.speechSynthesis.getVoices()
-        utterance.voice = voices.find(v => v.lang === voiceLang) || voices[0]
+        utterance.voice = voices.find(v => v.lang === utterance.lang) || voices[0]
 
         utterance.onend = () => setIsPlaying(false)
         utterance.onerror = () => setIsPlaying(false)
@@ -100,11 +96,7 @@ function Customize2() {
     const handleVoiceSelect = (voiceId) => {
         setSelectedVoice(voiceId)
         const [_, gender] = voiceId.split('-')
-        setVoiceSettings(prev => ({
-            ...prev,
-            voice: voiceId,
-            gender
-        }))
+        setVoiceSettings(prev => ({ ...prev, voice: voiceId, gender }))
     }
 
     // -----------------------------
@@ -116,7 +108,7 @@ function Customize2() {
             const formData = new FormData()
             formData.append("assistantName", assistantName)
 
-            // Upload file ONLY if user selected a NEW file
+            // Upload only if NEW image was chosen
             if (uploadFile instanceof File) {
                 formData.append("assistantImage", uploadFile)
             }
@@ -134,11 +126,12 @@ function Customize2() {
             localStorage.setItem("syraVoiceSettings", JSON.stringify(voiceSettings))
 
             navigate("/")
+
         } catch (err) {
             console.log("Update error:", err.response?.data || err.message)
-        } finally {
-            setLoading(false)
         }
+
+        setLoading(false)
     }
 
     const nextStep = () => {
@@ -149,38 +142,36 @@ function Customize2() {
         }
     }
 
-    const prevStep = () => currentStep > 1 && setCurrentStep(currentStep - 1)
+    const prevStep = () => setCurrentStep(prev => Math.max(1, prev - 1))
 
     return (
-        <div className='w-full min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex justify-center items-center flex-col p-[20px] relative overflow-hidden'>
+        <div className='w-full min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex justify-center items-center flex-col p-[20px]'>
 
             <MdKeyboardBackspace
-                className='absolute top-[20px] sm:top-[30px] left-[20px] sm:left-[30px] text-white cursor-pointer w-[20px] h-[20px] hover:scale-110 transition-transform z-20'
+                className='absolute top-[20px] left-[20px] text-white cursor-pointer w-[25px] h-[25px]'
                 onClick={() => navigate("/customize")}
             />
 
-            {/* Steps */}
-            <div className='absolute top-[20px] left-1/2 transform -translate-x-1/2 z-20'>
+            {/* STEP PROGRESS */}
+            <div className='absolute top-[20px] left-1/2 transform -translate-x-1/2'>
                 <div className='flex items-center gap-2'>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${currentStep >= 1 ? "bg-purple-400 text-white" : "bg-white/20 text-white/60"}`}>1</div>
-                    <div className={`w-8 h-1 ${currentStep >= 2 ? "bg-purple-400" : "bg-white/20"}`}></div>
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${currentStep >= 2 ? "bg-purple-400 text-white" : "bg-white/20 text-white/60"}`}>2</div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? "bg-purple-400 text-white" : "bg-white/20 text-white/40"}`}>1</div>
+                    <div className={`w-10 h-1 ${currentStep >= 2 ? "bg-purple-400" : "bg-white/20"}`}></div>
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? "bg-purple-400 text-white" : "bg-white/20 text-white/40"}`}>2</div>
                 </div>
             </div>
 
-            <div className='w-full max-w-2xl relative z-20'>
-                
+            <div className='w-full max-w-2xl'>
+
                 {/* STEP 1 */}
                 {currentStep === 1 && (
                     <div className='text-center'>
-                        <h1 className='text-white mb-10 text-3xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent'>
-                            Enter Your <span className='text-blue-200'>Assistant Name</span>
-                        </h1>
+                        <h1 className='text-white mb-8 text-3xl'>Enter Your Assistant Name</h1>
 
                         <input
                             type="text"
-                            className='w-full max-w-md h-[60px] bg-white/5 border-2 border-purple-400/50 text-white rounded-full px-5 backdrop-blur-lg'
-                            placeholder="eg. Alexa, Siri, Jarvis..."
+                            className='w-full max-w-md h-[60px] bg-white/10 border border-purple-400/40 text-white rounded-full px-5'
+                            placeholder="eg. Alexa, Siri..."
                             value={assistantName}
                             onChange={e => setAssistantName(e.target.value)}
                         />
@@ -200,26 +191,27 @@ function Customize2() {
                             )}
                         </div>
 
-                        {/* File input */}
+                        {/* File Upload */}
                         <div className='mt-4'>
                             <input
                                 type="file"
+                                accept="image/*"
+                                className='text-white'
                                 onChange={(e) => {
                                     const file = e.target.files?.[0]
                                     if (file) {
                                         setUploadFile(file)
-                                        const blobUrl = URL.createObjectURL(file)
-                                        setPreviewUrl(blobUrl)
+                                        const url = URL.createObjectURL(file)
+                                        setPreviewUrl(url)
                                     }
                                 }}
-                                className='text-white'
                             />
                         </div>
 
                         <button
                             onClick={nextStep}
-                            disabled={!assistantName.trim() || loading}
-                            className='px-8 py-4 mt-6 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-full'
+                            disabled={!assistantName.trim()}
+                            className='px-8 py-4 mt-6 bg-purple-500 text-white rounded-full'
                         >
                             Next <FaArrowRight className='inline ml-2' />
                         </button>
@@ -229,26 +221,27 @@ function Customize2() {
                 {/* STEP 2 */}
                 {currentStep === 2 && (
                     <div className='text-center'>
-                        <h1 className='text-white mb-10 text-3xl bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent'>
-                            Choose Your <span className='text-blue-200'>Assistant Voice</span>
-                        </h1>
+                        <h1 className='text-white mb-8 text-3xl'>Choose Your Assistant Voice</h1>
 
                         <div className='grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8'>
                             {voiceOptions.map((voice) => (
                                 <div
                                     key={voice.id}
                                     onClick={() => handleVoiceSelect(voice.id)}
-                                    className={`p-4 border rounded-2xl cursor-pointer ${
+                                    className={`p-4 rounded-2xl cursor-pointer border ${
                                         selectedVoice === voice.id
                                             ? "border-purple-400 bg-purple-400/20"
                                             : "border-white/20 bg-white/5"
                                     }`}
                                 >
-                                    <div className='flex justify-between'>
+                                    <div className='flex justify-between items-center'>
                                         <span className='text-2xl'>{voice.flag}</span>
-                                        {selectedVoice === voice.id && <FaCheck className='text-purple-400' />}
+                                        {selectedVoice === voice.id && (
+                                            <FaCheck className='text-purple-400 text-xl' />
+                                        )}
                                     </div>
                                     <div className='text-white mt-2'>{voice.name}</div>
+
                                     <button
                                         className='mt-2 p-2 bg-purple-400/20 rounded-full'
                                         onClick={(e) => {
@@ -273,13 +266,14 @@ function Customize2() {
                             <button
                                 onClick={nextStep}
                                 disabled={loading}
-                                className='px-8 py-3 bg-gradient-to-r from-purple-400 to-pink-400 text-white rounded-full'
+                                className='px-8 py-3 bg-purple-500 text-white rounded-full'
                             >
                                 {loading ? "Saving..." : "Finish"} <FaCheck className='inline ml-1' />
                             </button>
                         </div>
                     </div>
                 )}
+
             </div>
         </div>
     )
