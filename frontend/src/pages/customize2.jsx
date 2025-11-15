@@ -125,12 +125,12 @@ function Customize2() {
 
             // Case 2 — Existing backend image (URL)
             else if (backendImage) {
-                formData.append("imageUrl", backendImage)
+                formData.append("assistantImage", file);
             }
 
             // Case 3 — selectedImage URL string
             else if (typeof selectedImage === "string") {
-                formData.append("imageUrl", selectedImage)
+                formData.append("assistantImage", file);
             }
 
             const result = await axios.post(
