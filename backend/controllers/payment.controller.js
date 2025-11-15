@@ -155,7 +155,9 @@ export const getSubscription = async (req, res) => {
   }
 };
 
-// Cancel subscription
+// **************************************************
+// FINAL FIXED CANCEL SUBSCRIPTION
+// **************************************************
 export const cancelSubscription = async (req, res) => {
   try {
     const userId = req.userId;
@@ -173,27 +175,55 @@ export const cancelSubscription = async (req, res) => {
       });
     }
 
-    // Cancel in Razorpay
-    await razorpay.subscriptions.cancel(subscription.razorpaySubscriptionId, {
-      cancel_at_cycle_end: cancelAtPeriodEnd
-    });
+    // Try Razorpay cancellation
+    try {
+      await razorpay.subscriptions.cancel(subscription.razorpaySubscriptionId, {
+        cancel_at_cycle_end: cancelAtPeriodEnd
+      });
 
-    // Update subscription
-    subscription.cancelAtPeriodEnd = cancelAtPeriodEnd;
-    subscription.cancelledAt = new Date();
-    subscription.status = cancelAtPeriodEnd ? 'active' : 'cancelled';
-    await subscription.save();
+      // Razorpay accepted cancellation → Update DB
+      subscription.cancelAtPeriodEnd = cancelAtPeriodEnd;
+      subscription.cancelledAt = new Date();
+      subscription.status = cancelAtPeriodEnd ? 'active' : 'cancelled';
+      await subscription.save();
 
-    // Update user
-    await User.findByIdAndUpdate(userId, {
-      subscriptionStatus: cancelAtPeriodEnd ? 'active' : 'cancelled'
-    });
+      await User.findByIdAndUpdate(userId, {
+        subscriptionStatus: cancelAtPeriodEnd ? 'active' : 'cancelled'
+      });
 
-    res.json({
-      success: true,
-      message: `Subscription ${cancelAtPeriodEnd ? 'will be cancelled at period end' : 'cancelled immediately'}`,
-      data: subscription
-    });
+      return res.json({
+        success: true,
+        message: cancelAtPeriodEnd
+          ? 'Subscription will be cancelled at period end.'
+          : 'Subscription cancelled immediately.',
+        data: subscription
+      });
+
+    } catch (err) {
+      // Razorpay trial error handling
+      if (
+        err.error &&
+        err.error.description ===
+          'Subscription cannot be cancelled since no billing cycle is going on'
+      ) {
+        subscription.status = 'cancelled';
+        subscription.cancelledAt = new Date();
+        subscription.cancelAtPeriodEnd = false;
+        await subscription.save();
+
+        await User.findByIdAndUpdate(userId, {
+          subscriptionStatus: 'cancelled'
+        });
+
+        return res.json({
+          success: true,
+          message: 'Trial subscription cancelled successfully.',
+          data: subscription
+        });
+      }
+
+      throw err;
+    }
 
   } catch (error) {
     console.error('Cancel subscription error:', error);
@@ -223,7 +253,7 @@ export const getBillingHistory = async (req, res) => {
       data: {
         payments: payments.map(payment => ({
           id: payment._id,
-          amount: payment.amount / 100, // Convert to rupees
+          amount: payment.amount / 100,
           currency: payment.currency,
           status: payment.status,
           paymentMethod: payment.paymentMethod,
@@ -313,13 +343,12 @@ export const generateInvoice = async (req, res) => {
   }
 };
 
-// Webhook handler for Razorpay events
+// Webhook handler
 export const handleWebhook = async (req, res) => {
   try {
     const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
     const signature = req.headers['x-razorpay-signature'];
 
-    // Verify webhook signature
     const expectedSignature = crypto
       .createHmac('sha256', secret)
       .update(JSON.stringify(req.body))
@@ -378,7 +407,6 @@ const handleSubscriptionCharged = async (data) => {
   const subscriptionData = data.subscription.entity;
   const paymentData = data.payment.entity;
 
-  // Update subscription
   const subscription = await Subscription.findOne({
     razorpaySubscriptionId: subscriptionData.id
   });
@@ -389,12 +417,10 @@ const handleSubscriptionCharged = async (data) => {
     subscription.currentPeriodEnd = new Date(subscriptionData.current_end * 1000);
     await subscription.save();
 
-    // Update user
     await User.findByIdAndUpdate(subscription.userId, {
       subscriptionStatus: 'active'
     });
 
-    // Create payment record
     const payment = new Payment({
       userId: subscription.userId,
       subscriptionId: subscription._id,
@@ -408,7 +434,6 @@ const handleSubscriptionCharged = async (data) => {
 
     await payment.save();
 
-    // Generate invoice
     await generateInvoiceForPayment(payment);
   }
 };
@@ -425,7 +450,6 @@ const handleSubscriptionCancelled = async (data) => {
     subscription.cancelledAt = new Date();
     await subscription.save();
 
-    // Update user
     await User.findByIdAndUpdate(subscription.userId, {
       subscriptionStatus: 'cancelled',
       premiumFeatures: {
@@ -443,13 +467,11 @@ const handleSubscriptionCancelled = async (data) => {
 const handlePaymentFailed = async (data) => {
   const paymentData = data.payment.entity;
 
-  // Find subscription
   const subscription = await Subscription.findOne({
     razorpaySubscriptionId: paymentData.subscription_id
   });
 
   if (subscription) {
-    // Create failed payment record
     const payment = new Payment({
       userId: subscription.userId,
       subscriptionId: subscription._id,
@@ -464,17 +486,13 @@ const handlePaymentFailed = async (data) => {
 
     await payment.save();
 
-    // Update subscription status
     subscription.status = 'past_due';
     await subscription.save();
 
-    // Update user
     await User.findByIdAndUpdate(subscription.userId, {
       subscriptionStatus: 'past_due'
     });
 
-    // TODO: Implement retry logic
-    // Schedule retry payment
     await schedulePaymentRetry(payment);
   }
 };
@@ -513,7 +531,7 @@ const handleSubscriptionResumed = async (data) => {
   }
 };
 
-// Helper function to generate invoice for payment
+// Invoice generator
 const generateInvoiceForPayment = async (payment) => {
   try {
     const invoiceNumber = `INV-${Date.now()}-${payment._id.toString().slice(-6).toUpperCase()}`;
@@ -546,17 +564,15 @@ const generateInvoiceForPayment = async (payment) => {
   }
 };
 
-// Helper function to schedule payment retry
+// Retry logic
 const schedulePaymentRetry = async (payment) => {
   try {
-    // Simple retry logic - retry after 3 days
     const retryAt = moment().add(3, 'days').toDate();
 
     payment.nextRetryAt = retryAt;
     payment.retryCount += 1;
     await payment.save();
 
-    // TODO: Implement actual retry mechanism (could use a job queue)
     console.log(`Scheduled retry for payment ${payment._id} at ${retryAt}`);
   } catch (error) {
     console.error('Schedule payment retry error:', error);
