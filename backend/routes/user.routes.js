@@ -1,5 +1,11 @@
-import express from "express"
-import { askToAssistant, getCurrentUser, updateAssistant, contactForm } from "../controllers/user.controller.js"
+import express from "express";
+import { 
+  askToAssistant, 
+  getCurrentUser, 
+  updateAssistant, 
+  contactForm 
+} from "../controllers/user.controller.js";
+
 import {
   createSubscription,
   getSubscription,
@@ -7,26 +13,27 @@ import {
   getBillingHistory,
   generateInvoice,
   handleWebhook
-} from "../controllers/payment.controller.js"
-import isAuth from "../middlewares/isAuth.js"
-import upload from "../middlewares/multer.js"
+} from "../controllers/payment.controller.js";
 
-const userRouter=express.Router()
+import isAuth from "../middlewares/isAuth.js";
+import upload from "../middlewares/multer.js";
+
+const userRouter = express.Router();
 
 // Existing user routes
-userRouter.get("/current",isAuth,getCurrentUser)
-userRouter.post("/update",isAuth,upload.single("assistantImage"),updateAssistant)
-userRouter.post("/asktoassistant",isAuth,askToAssistant)
-userRouter.post("/contact",contactForm)
+userRouter.get("/current", isAuth, getCurrentUser);
+userRouter.post("/update", isAuth, upload.single("assistantImage"), updateAssistant);
+userRouter.post("/asktoassistant", isAuth, askToAssistant);
+userRouter.post("/contact", contactForm);
 
 // Payment & Subscription routes
-userRouter.post("/subscription",isAuth,createSubscription)
-userRouter.get("/subscription",isAuth,getSubscription)
-userRouter.post("/subscription/cancel",isAuth,cancelSubscription)
-userRouter.get("/billing-history",isAuth,getBillingHistory)
-userRouter.post("/invoice/:paymentId",isAuth,generateInvoice)
+userRouter.post("/subscription", isAuth, createSubscription);
+userRouter.get("/subscription", isAuth, getSubscription);
+userRouter.post("/subscription/cancel", isAuth, cancelSubscription);
+userRouter.get("/billing-history", isAuth, getBillingHistory);
+userRouter.post("/invoice/:paymentId", isAuth, generateInvoice);
 
-// Webhook route (no auth required for webhooks)
-userRouter.post("/webhook",express.raw({ type: 'application/json' }),handleWebhook)
+// Webhook route (no auth required)
+userRouter.post("/webhook", express.raw({ type: "application/json" }), handleWebhook);
 
-export default userRouter
+export default userRouter;

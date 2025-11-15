@@ -1,19 +1,25 @@
-import jwt from "jsonwebtoken"
-const isAuth=async (req,res,next)=>{
-    try {
-        const token=req.cookies.token
-        if(!token){
-            return res.status(400).json({message:"token not found"})
-        }
-        const verifyToken=await jwt.verify(token,process.env.JWT_SECRET)
-        req.userId=verifyToken.userId
+import jwt from "jsonwebtoken";
 
-        next()
-
-    } catch (error) {
-        console.log(error)
-        return res.status(500).json({message:"is Auth error"})
+const isAuth = async (req, res, next) => {
+  try {
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(401).json({ message: "Auth token not found" });
     }
-}
 
-export default isAuth
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(401).json({ message: "Invalid or expired token" });
+    }
+
+    req.userId = payload.userId;
+    return next();
+  } catch (error) {
+    console.error("isAuth error:", error);
+    return res.status(500).json({ message: "Internal auth error" });
+  }
+};
+
+export default isAuth;
