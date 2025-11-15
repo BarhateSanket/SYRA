@@ -35,23 +35,29 @@ function Customize2() {
     const [uploadFile, setUploadFile] = useState(null)
 
     useEffect(() => {
-        // If user selected a new File
+        // If user selected a new File from customize page
         if (selectedImage instanceof File) {
             setUploadFile(selectedImage)
-            const url = URL.createObjectURL(selectedImage)
-            setPreviewUrl(url)
+            setPreviewUrl(URL.createObjectURL(selectedImage))
             return
         }
 
-        // If user selected a blob URL or frontend URL
+        // If backendImage is a File (from card selection)
+        if (backendImage instanceof File) {
+            setUploadFile(backendImage)
+            setPreviewUrl(URL.createObjectURL(backendImage))
+            return
+        }
+
+        // If user selected a URL (predefined images)
         if (typeof selectedImage === "string") {
             setUploadFile(null)
             setPreviewUrl(selectedImage)
             return
         }
 
-        // If backend image exists
-        if (backendImage) {
+        // If backendImage is a URL (existing image)
+        if (backendImage && typeof backendImage === "string") {
             setUploadFile(null)
             setPreviewUrl(backendImage)
             return
