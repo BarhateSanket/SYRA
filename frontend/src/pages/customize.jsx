@@ -57,7 +57,7 @@ setSelectedImage("input")
 
       {(selectedImage || frontendImage) && (
         <div className='flex flex-col items-center gap-4 relative z-20'>
-          {console.log("Rendering next button, selectedImage:", selectedImage, "frontendImage:", frontendImage)}
+          {console.log("Rendering next button, selectedImage:", selectedImage, "frontendImage:", frontendImage, "backendImage:", backendImage)}
           {(selectedImage && selectedImage !== "input") && (
             <div className='w-[100px] h-[150px] sm:w-[120px] sm:h-[180px] rounded-2xl overflow-hidden shadow-2xl border-4 border-purple-400'>
               <img src={selectedImage} alt="Selected" className='w-full h-full object-cover' />
