@@ -2,7 +2,7 @@ import axios from 'axios'
 import React, { createContext, useEffect, useState } from 'react'
 export const userDataContext=createContext()
 function UserContext({children}) {
-    const serverUrl="https://syra-jaeg.onrender.com"
+    const serverUrl=import.meta.env.VITE_API_URL;
     const [userData,setUserData]=useState(null)
     const [frontendImage,setFrontendImage]=useState(null)
      const [backendImage,setBackendImage]=useState(null)
@@ -24,8 +24,13 @@ function UserContext({children}) {
    console.log("API Response:", result.data);
    return result.data
  } catch (error) {
-   console.log("API Error:", error)
-   return null
+   console.log("API Error:", error.response?.status, error.response?.data)
+   // Return a fallback response instead of null
+   return {
+     type: "general",
+     userInput: command,
+     response: "I'm experiencing some technical difficulties right now. Please try again in a moment."
+   }
  }
     }
 

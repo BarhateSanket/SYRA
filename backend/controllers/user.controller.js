@@ -2,17 +2,17 @@
 import geminiResponse from "../gemini.js"
 import User from "../models/user.model.js"
 import moment from "moment"
- export const getCurrentUser=async (req,res)=>{
+export const getCurrentUser=async (req,res)=>{
     try {
         const userId=req.userId
-        const user=await User.findById(userId).select("-password")
+        const user=await User.findById(userId).select("-password").populate('currentSubscription')
         if(!user){
 return res.status(400).json({message:"user not found"})
         }
 
-   return res.status(200).json(user)     
+   return res.status(200).json(user)
     } catch (error) {
-       return res.status(400).json({message:"get current user error"}) 
+       return res.status(400).json({message:"get current user error"})
     }
 }
 
@@ -78,21 +78,36 @@ export const askToAssistant=async (req,res)=>{
 
        if (!result) {
            console.error("Gemini response is null/undefined");
-           return res.status(500).json({ response: "Failed to get response from Gemini" });
+           // Return a fallback response instead of error
+           return res.json({
+               type: "general",
+               userInput: command,
+               response: "I'm sorry, I'm having trouble processing your request right now. Please try again later."
+           });
        }
 
       const jsonMatch=result.match(/{[\s\S]*}/)
       console.log("JSON match result:", jsonMatch);
       if(!jsonMatch){
          console.error("No JSON found in Gemini response");
-         return res.status(400).json({response:"sorry, i can't understand"})
+         // Return a fallback response instead of error
+         return res.json({
+             type: "general",
+             userInput: command,
+             response: "I didn't quite understand that. Could you please rephrase your request?"
+         });
       }
       let gemResult;
       try {
           gemResult = JSON.parse(jsonMatch[0]);
       } catch (parseError) {
           console.error("JSON parse error:", parseError);
-          return res.status(400).json({ response: "Invalid response format from assistant" });
+          // Return a fallback response instead of error
+          return res.json({
+              type: "general",
+              userInput: command,
+              response: "I'm having trouble understanding your request. Please try again."
+          });
       }
       console.log(gemResult)
       const type=gemResult.type
@@ -127,8 +142,8 @@ export const askToAssistant=async (req,res)=>{
       case 'youtube-play':
       case 'general':
       case  "calculator-open":
-      case "instagram-open": 
-       case "facebook-open": 
+      case "instagram-open":
+       case "facebook-open":
        case "weather-show" :
          return res.json({
             type,
@@ -137,12 +152,21 @@ export const askToAssistant=async (req,res)=>{
          });
 
          default:
-            return res.status(400).json({ response: "I didn't understand that command." })
+            return res.json({
+                type: "general",
+                userInput: command,
+                response: "I didn't understand that command. Please try asking something else."
+            });
       }
-     
+
 
    } catch (error) {
   console.error("Ask assistant error:", error);
-  return res.status(500).json({ response: "ask assistant error", error: error.message })
+  // Return a fallback response instead of error
+  return res.json({
+      type: "general",
+      userInput: req.body.command || "unknown command",
+      response: "I'm experiencing some technical difficulties. Please try again in a moment."
+  });
    }
 }

@@ -1,12 +1,12 @@
-# TODO: Add Payment Method Page with Navigation
+# Fix Payment API Errors
+
+## Issues Identified
+- Frontend payment components are using incorrect API URLs (missing `/api` prefix)
+- This causes 404 errors when fetching subscription and billing history
+- JSON parsing fails because 404 pages return HTML instead of JSON
 
 ## Tasks
-- [x] Create PaymentMethod.jsx page component
-- [x] Add /payment-method route to App.jsx (protected for authenticated users)
-- [x] Update Header.jsx desktop navigation to include Payment Method link
-- [x] Update Header.jsx mobile navigation to include Payment Method link
-- [x] Update Header.jsx profile dropdown to include Payment Method link
-
-## Followup Steps
-- [ ] Test navigation to ensure the page loads correctly
-- [ ] Verify styling consistency with the app's theme
+- [ ] Update AddPaymentMethod.jsx API URLs to include `/api` prefix
+- [ ] Update PaymentMethod.jsx API URLs to include `/api` prefix
+- [ ] Verify VITE_API_URL environment variable is set correctly
+- [ ] Test subscription creation and fetching functionality
