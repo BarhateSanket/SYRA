@@ -11,7 +11,10 @@ import { FaMicrophone, FaMicrophoneSlash, FaBrain, FaShieldAlt, FaStar, FaCog, F
 import Toast from '../components/Toast'
 import ProgressBar from '../components/ProgressBar'
 import Header from '../components/Header'
+import VoiceControls from '../components/VoiceControls'
 import commandCache from '../components/CommandCache'
+import useWakeWord from '../hooks/useWakeWord'
+import useTouchGestures from '../hooks/useTouchGestures'
 function Home() {
   const {userData,serverUrl,setUserData,getGeminiResponse}=useContext(userDataContext)
   const navigate=useNavigate()
@@ -30,6 +33,16 @@ function Home() {
    const [voiceSettings, setVoiceSettings] = useState(() => {
      return JSON.parse(localStorage.getItem('syraVoiceSettings') || '{"voice": "hi-IN-male", "gender": "male", "rate": 1, "pitch": 1, "volume": 1}')
    })
+
+  // Wake word and touch gesture hooks
+  const { isListening: wakeWordActive, startListening: startWakeWord, stopListening: stopWakeWord, updateSensitivity } = useWakeWord()
+  const touchRef = useRef(null)
+  useTouchGestures(touchRef, {
+    onSwipeUp: () => setShowVoiceSettings(true),
+    onSwipeDown: () => setShowVoiceSettings(false),
+    onDoubleTap: () => testVoice(),
+    onLongPress: () => setListening(!listening)
+  })
 
   const handleLogOut=async ()=>{
     try {
@@ -181,16 +194,16 @@ function Home() {
     }
     const {type,userInput,response}=data
       speak(response);
-    
+
     if (type === 'google-search') {
       const query = encodeURIComponent(userInput);
       window.open(`https://www.google.com/search?q=${query}`, '_blank');
     }
      if (type === 'calculator-open') {
-  
+
       window.open(`https://www.google.com/search?q=calculator`, '_blank');
     }
-     if (type === "instagram-open") {
+     if (type ==="instagram-open") {
       window.open(`https://www.instagram.com/`, '_blank');
     }
     if (type ==="facebook-open") {
@@ -200,9 +213,133 @@ function Home() {
       window.open(`https://www.google.com/search?q=weather`, '_blank');
     }
 
+    if (type === 'gmail-read') {
+      // Handle Gmail read - this would need backend integration
+      console.log('Gmail read command detected');
+      // For now, open Gmail
+      window.open('https://mail.google.com/', '_blank');
+    }
+    if (type === 'gmail-send') {
+      // Handle Gmail send - this would need backend integration
+      console.log('Gmail send command detected');
+      // For now, open Gmail compose
+      window.open('https://mail.google.com/mail/?view=cm&fs=1', '_blank');
+    }
+    if (type === 'calendar-events') {
+      // Handle calendar events - this would need backend integration
+      console.log('Calendar events command detected');
+      window.open('https://calendar.google.com/', '_blank');
+    }
+    if (type === 'calendar-create') {
+      // Handle calendar create - this would need backend integration
+      console.log('Calendar create command detected');
+      window.open('https://calendar.google.com/calendar/u/0/r/eventedit', '_blank');
+    }
+    if (type === 'drive-files') {
+      // Handle drive files - this would need backend integration
+      console.log('Drive files command detected');
+      window.open('https://drive.google.com/', '_blank');
+    }
+    if (type === 'photos-search') {
+      // Handle photos search - this would need backend integration
+      console.log('Photos search command detected');
+      window.open('https://photos.google.com/', '_blank');
+    }
+    if (type === 'youtube-playlists') {
+      // Handle YouTube playlists - this would need backend integration
+      console.log('YouTube playlists command detected');
+      window.open('https://www.youtube.com/feed/library', '_blank');
+    }
+    if (type === 'youtube-subscriptions') {
+      // Handle YouTube subscriptions - this would need backend integration
+      console.log('YouTube subscriptions command detected');
+      window.open('https://www.youtube.com/feed/subscriptions', '_blank');
+    }
+    if (type === 'github-repos') {
+      // Handle GitHub repos - this would need backend integration
+      console.log('GitHub repos command detected');
+      window.open('https://github.com/', '_blank');
+    }
+    if (type === 'github-issues') {
+      // Handle GitHub issues - this would need backend integration
+      console.log('GitHub issues command detected');
+      window.open('https://github.com/', '_blank');
+    }
+    if (type === 'github-prs') {
+      // Handle GitHub PRs - this would need backend integration
+      console.log('GitHub PRs command detected');
+      window.open('https://github.com/', '_blank');
+    }
+    if (type === 'github-create-issue') {
+      // Handle GitHub create issue - this would need backend integration
+      console.log('GitHub create issue command detected');
+      window.open('https://github.com/', '_blank');
+    }
+    if (type === 'github-create-pr') {
+      // Handle GitHub create PR - this would need backend integration
+      console.log('GitHub create PR command detected');
+      window.open('https://github.com/', '_blank');
+    }
     if (type === 'youtube-search' || type === 'youtube-play') {
       const query = encodeURIComponent(userInput);
       window.open(`https://www.youtube.com/results?search_query=${query}`, '_blank');
+    }
+
+    // New Smart Home & IoT Features
+    if (type === 'weather-current') {
+      // Handle current weather - backend integration
+      console.log('Current weather command detected');
+      // This will be handled by displaying weather data in the UI
+    }
+    if (type === 'weather-forecast') {
+      // Handle weather forecast - backend integration
+      console.log('Weather forecast command detected');
+      // This will be handled by displaying forecast data in the UI
+    }
+    if (type === 'news-get') {
+      // Handle news fetching - backend integration
+      console.log('News command detected');
+      // This will be handled by displaying news in the UI
+    }
+    if (type === 'stocks-quote') {
+      // Handle stock quote - backend integration
+      console.log('Stock quote command detected');
+      // This will be handled by displaying stock data in the UI
+    }
+    if (type === 'stocks-overview') {
+      // Handle stock overview - backend integration
+      console.log('Stock overview command detected');
+      // This will be handled by displaying stock overview in the UI
+    }
+    if (type === 'currency-convert') {
+      // Handle currency conversion - backend integration
+      console.log('Currency conversion command detected');
+      // This will be handled by displaying conversion result in the UI
+    }
+    if (type === 'units-convert') {
+      // Handle unit conversion - backend integration
+      console.log('Unit conversion command detected');
+      // This will be handled by displaying conversion result in the UI
+    }
+    if (type === 'reminder-create') {
+      // Handle reminder creation - backend integration
+      console.log('Create reminder command detected');
+      // This will be handled by creating reminder via API
+    }
+    if (type === 'reminder-list') {
+      // Handle reminder listing - backend integration
+      console.log('List reminders command detected');
+      // This will be handled by displaying reminders in the UI
+    }
+    if (type === 'smarthome-devices') {
+      // Handle smart home devices - backend integration
+      console.log('Smart home devices command detected');
+      // This will be handled by displaying devices in the UI
+    }
+    if (type === 'smarthome-control') {
+      // Handle smart home control - backend integration
+      console.log('Smart home control command detected');
+      // This will be handled by controlling devices via API
     }
 
   }
@@ -768,7 +905,7 @@ useEffect(() => {
 
 
   return (
-    <div className='w-full min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 light:from-white light:via-gray-50 light:to-gray-100 flex flex-col overflow-hidden relative transition-all duration-300 dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 light:bg-gradient-to-br light:from-white light:via-gray-50 light:to-gray-100'>
+    <div ref={touchRef} className='w-full min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 light:from-white light:via-gray-50 light:to-gray-100 flex flex-col overflow-hidden relative transition-all duration-300 dark:bg-gradient-to-br dark:from-slate-900 dark:via-purple-900 dark:to-slate-900 light:bg-gradient-to-br light:from-white light:via-gray-50 light:to-gray-100'>
       <Header />
       <div className='flex-1 flex justify-center items-center flex-col gap-[20px] pt-16'>
       {/* Animated background particles */}
@@ -785,6 +922,13 @@ useEffect(() => {
           <div className='flex items-center gap-2 sm:gap-3'>
             <img src={logo1} alt="Logo" className='w-6 h-6 sm:w-8 sm:h-8' />
             <span className='text-white font-bold text-lg sm:text-xl bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent'>SYRA AI</span>
+            {/* Premium Badge */}
+            {userData?.subscriptionStatus === 'active' && userData?.subscriptionPlan !== 'free' && (
+              <div className='flex items-center gap-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-black text-xs px-2 py-1 rounded-full font-bold'>
+                <FaStar className='text-xs' />
+                PREMIUM
+              </div>
+            )}
           </div>
 
           {/* Desktop Navigation */}
@@ -793,13 +937,24 @@ useEffect(() => {
               <FaBrain className='text-blue-400' />
               <span>Customize</span>
             </button>
+            {/* Premium Features - Only show for premium users */}
+            {userData?.premiumFeatures?.advancedAnalytics && (
+              <button className='flex items-center gap-2 text-white/80 hover:text-white text-xs sm:text-sm transition-colors px-3 py-2 rounded-lg hover:bg-white/10' onClick={()=>navigate("/analytics")}>
+                <FaRocket className='text-green-400' />
+                <span>Analytics</span>
+              </button>
+            )}
             <button className='flex items-center gap-2 text-white/80 hover:text-white text-xs sm:text-sm transition-colors px-3 py-2 rounded-lg hover:bg-white/10' onClick={handleLogOut}>
               <FaShieldAlt className='text-red-400' />
               <span>Logout</span>
             </button>
-            <button className='flex items-center gap-2 text-white/80 hover:text-yellow-400 text-xs sm:text-sm transition-colors px-3 py-2 rounded-lg hover:bg-yellow-400/10 border border-yellow-400/20 hover:border-yellow-400/40' onClick={()=>navigate("/premium")}>
+            <button className={`flex items-center gap-2 text-xs sm:text-sm transition-colors px-3 py-2 rounded-lg border ${
+              userData?.subscriptionStatus === 'active' && userData?.subscriptionPlan !== 'free'
+                ? 'text-yellow-400 border-yellow-400/40 bg-yellow-400/10'
+                : 'text-white/80 hover:text-yellow-400 border-yellow-400/20 hover:border-yellow-400/40 hover:bg-yellow-400/10'
+            }`} onClick={()=>navigate("/premium")}>
               <FaStar className='text-yellow-400' />
-              <span>Premium</span>
+              <span>{userData?.subscriptionStatus === 'active' && userData?.subscriptionPlan !== 'free' ? 'Premium' : 'Upgrade'}</span>
             </button>
           </div>
 

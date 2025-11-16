@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: syra-staging
+  labels:
+    name: syra-staging
+    environment: staging
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-secret
+  namespace: syra-staging
+type: Opaque
+data:
+  url: bW9uZ29kYitzcnY6Ly91c2VyOnBhc3NAZGJfaG9zdDo2NTE3L3N5cmFfc3RhZ2luZz9hdXRoU291cmNlPWFkbWlu # base64 encoded
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: redis-secret
+  namespace: syra-staging
+type: Opaque
+data:
+  url: cmVkaXM6Ly9yZWRpczo2Mzc5 # base64 encoded
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: jwt-secret
+  namespace: syra-staging
+type: Opaque
+data:
+  secret: eW91cl9zdXBlcl9zZWNyZXRfamt0X2tleV9oZXJl # base64 encoded
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gemini-secret
+  namespace: syra-staging
+type: Opaque
+data:
+  api-url: aHR0cHM6Ly9nZW5lcmF0aXZlbGFuZ3VhZ2UuZ29vZ2xlYXBpcy5jb20vdjFiZXRhL21vZGVscy9nZW1pbmktcHJvOmdlbmVyYXRlQ29udGVudD9rZXk9WU9VUl9BUElfS0VZA== # base64 encoded
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cloudinary-secret
+  namespace: syra-staging
+type: Opaque
+data:
+  cloud-name: eW91cl9jbG91ZF9uYW1l # base64 encoded
+  api-key: eW91cl9hcGlfa2V5 # base64 encoded
+  api-secret: eW91cl9hcGlfc2VjcmV0 # base64 encoded

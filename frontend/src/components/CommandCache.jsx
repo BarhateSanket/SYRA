@@ -3,6 +3,7 @@ class CommandCache {
     this.cache = new Map();
     this.maxSize = maxSize;
     this.ttl = ttl;
+    this.pendingCommands = new Map(); // For background sync
   }
 
   // Generate cache key from command
@@ -64,9 +65,48 @@ class CommandCache {
     });
   }
 
+  // Queue command for background sync when offline
+  queueForSync(command, data) {
+    const key = this.generateKey(command);
+    this.pendingCommands.set(key, {
+      command,
+      data,
+      timestamp: Date.now()
+    });
+
+    // Register background sync if supported
+    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+      navigator.serviceWorker.ready.then(registration => {
+        registration.sync.register('command-sync');
+      });
+    }
+  }
+
+  // Process queued commands (called by service worker)
+  async processQueuedCommands() {
+    const commands = Array.from(this.pendingCommands.entries());
+    const results = [];
+
+    for (const [key, { command, data, timestamp }] of commands) {
+      try {
+        // Attempt to send the command (implement actual API call here)
+        // For now, just log and remove from queue
+        console.log('Processing queued command:', command);
+        this.pendingCommands.delete(key);
+        results.push({ command, success: true });
+      } catch (error) {
+        console.error('Failed to process queued command:', error);
+        results.push({ command, success: false, error });
+      }
+    }
+
+    return results;
+  }
+
   // Clear cache
   clear() {
     this.cache.clear();
+    this.pendingCommands.clear();
   }
 
   // Get cache stats
@@ -74,6 +114,7 @@ class CommandCache {
     return {
       size: this.cache.size,
       maxSize: this.maxSize,
+      pendingCommands: this.pendingCommands.size,
       hitRate: 0 // Could be implemented with hit/miss counters
     };
   }
@@ -84,6 +125,13 @@ class CommandCache {
     for (const [key, value] of this.cache.entries()) {
       if (now - value.timestamp > this.ttl) {
         this.cache.delete(key);
+      }
+    }
+
+    // Clean old pending commands (older than 24 hours)
+    for (const [key, value] of this.pendingCommands.entries()) {
+      if (now - value.timestamp > 24 * 60 * 60 * 1000) {
+        this.pendingCommands.delete(key);
       }
     }
   }

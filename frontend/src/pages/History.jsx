@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react'
+import React, { useContext, useEffect, useState, useMemo } from 'react'
 import { FaHistory, FaSearch, FaTrash, FaDownload, FaFilter, FaCalendar, FaUser, FaRobot, FaArrowLeft } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import { userDataContext } from '../ContextApi/UserContext';
@@ -189,9 +189,9 @@ function History() {
           </div>
 
           {/* Conversation List */}
-          <div className='space-y-4'>
+          <div className='bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-2xl border border-white/20 overflow-hidden'>
             {filteredConversations.length === 0 ? (
-              <div className='bg-gradient-to-br from-white/5 to-white/5 backdrop-blur-lg rounded-2xl p-12 border border-white/10 text-center'>
+              <div className='p-12 text-center'>
                 <FaHistory className='text-white/40 text-6xl mx-auto mb-4' />
                 <h3 className='text-white/80 text-xl font-semibold mb-2'>No conversations found</h3>
                 <p className='text-white/60'>
@@ -202,46 +202,50 @@ function History() {
                 </p>
               </div>
             ) : (
-              filteredConversations.map((conversation, index) => (
-                <div
-                  key={conversation.id}
-                  className='bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-purple-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-400/20'
-                >
-                  <div className='flex items-start justify-between mb-4'>
-                    <div className='flex items-center gap-3'>
-                      <div className='bg-blue-500/20 p-2 rounded-lg'>
-                        <FaUser className='text-blue-400 text-sm' />
-                      </div>
-                      <div>
-                        <div className='text-white font-semibold'>You</div>
-                        <div className='text-white/60 text-sm flex items-center gap-2'>
-                          <FaCalendar className='text-xs' />
-                          {formatDate(conversation.timestamp)}
+              <div className='max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-purple-400 scrollbar-track-transparent'>
+                {filteredConversations.map((conversation, index) => (
+                  <div
+                    key={conversation.id}
+                    className='p-4 border-b border-white/10 last:border-b-0'
+                  >
+                    <div className='bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-purple-400/50 transition-all duration-300 hover:shadow-2xl hover:shadow-purple-400/20'>
+                      <div className='flex items-start justify-between mb-4'>
+                        <div className='flex items-center gap-3'>
+                          <div className='bg-blue-500/20 p-2 rounded-lg'>
+                            <FaUser className='text-blue-400 text-sm' />
+                          </div>
+                          <div>
+                            <div className='text-white font-semibold'>You</div>
+                            <div className='text-white/60 text-sm flex items-center gap-2'>
+                              <FaCalendar className='text-xs' />
+                              {formatDate(conversation.timestamp)}
+                            </div>
+                          </div>
                         </div>
+                        <div className='text-white/40 text-sm'>#{conversation.id}</div>
                       </div>
-                    </div>
-                    <div className='text-white/40 text-sm'>#{conversation.id}</div>
-                  </div>
 
-                  <div className='bg-white/5 rounded-lg p-4 border border-white/10'>
-                    <p className='text-white/90 leading-relaxed'>{conversation.userMessage}</p>
-                  </div>
+                      <div className='bg-white/5 rounded-lg p-4 border border-white/10'>
+                        <p className='text-white/90 leading-relaxed'>{conversation.userMessage}</p>
+                      </div>
 
-                  {conversation.assistantResponse && (
-                    <div className='mt-4'>
-                      <div className='flex items-center gap-3 mb-2'>
-                        <div className='bg-purple-500/20 p-2 rounded-lg'>
-                          <FaRobot className='text-purple-400 text-sm' />
+                      {conversation.assistantResponse && (
+                        <div className='mt-4'>
+                          <div className='flex items-center gap-3 mb-2'>
+                            <div className='bg-purple-500/20 p-2 rounded-lg'>
+                              <FaRobot className='text-purple-400 text-sm' />
+                            </div>
+                            <div className='text-white font-semibold'>SYRA AI</div>
+                          </div>
+                          <div className='bg-purple-500/10 rounded-lg p-4 border border-purple-500/20'>
+                            <p className='text-white/90 leading-relaxed'>{conversation.assistantResponse}</p>
+                          </div>
                         </div>
-                        <div className='text-white font-semibold'>SYRA AI</div>
-                      </div>
-                      <div className='bg-purple-500/10 rounded-lg p-4 border border-purple-500/20'>
-                        <p className='text-white/90 leading-relaxed'>{conversation.assistantResponse}</p>
-                      </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              ))
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>

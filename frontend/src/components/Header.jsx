@@ -1,5 +1,5 @@
 import React, { useContext, useState, useRef, useEffect } from 'react'
-import { FaRocket, FaBars, FaTimes, FaHome, FaInfo, FaServicestack, FaEnvelope, FaUser, FaSignOutAlt, FaBrain, FaStar, FaShieldAlt, FaHistory, FaChevronDown, FaCog, FaUserCircle, FaCreditCard } from "react-icons/fa";
+import { FaRocket, FaBars, FaTimes, FaHome, FaInfo, FaServicestack, FaEnvelope, FaUser, FaSignOutAlt, FaBrain, FaStar, FaShieldAlt, FaHistory, FaChevronDown, FaCog, FaUserCircle, FaCreditCard, FaChartBar } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
 import { userDataContext } from '../ContextApi/UserContext';
 import ThemeToggle from './ThemeToggle';
@@ -192,6 +192,14 @@ function Header() {
                           Payment Methods
                         </button>
 
+                        <button
+                          onClick={() => { navigate('/analytics'); setIsProfileOpen(false); }}
+                          className='w-full text-left text-white/80 hover:text-white hover:bg-white/10 transition-colors duration-300 flex items-center gap-3 px-4 py-3'
+                        >
+                          <FaChartBar className='text-sm' />
+                          Analytics
+                        </button>
+
                         <div className='border-t border-white/10 my-2'></div>
 
                         <button
@@ -342,6 +350,14 @@ function Header() {
                   >
                     <FaCreditCard className='text-lg' />
                     Payment Methods
+                  </button>
+
+                  <button
+                    onClick={() => { navigate('/analytics'); closeMenu(); }}
+                    className='w-full text-left text-white/80 hover:text-white transition-colors duration-300 flex items-center gap-3 px-3 py-3 rounded-lg hover:bg-white/10'
+                  >
+                    <FaChartBar className='text-lg' />
+                    Analytics
                   </button>
 
                   <div className='border-t border-white/10 my-2'></div>
