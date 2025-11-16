@@ -1,10 +1,10 @@
-const express = require("express");
+import express from "express";
 
-const {
+import {
   convertCurrency,
   getExchangeRates,
   getSupportedCurrencies
-} = require("../controllers/currency.controller.js");
+} from "../controllers/currency.controller.js";
 
 const router = express.Router();
 
@@ -12,4 +12,4 @@ router.get("/convert", convertCurrency);
 router.get("/rates", getExchangeRates);
 router.get("/supported", getSupportedCurrencies);
 
-module.exports = router;
+export default router;
