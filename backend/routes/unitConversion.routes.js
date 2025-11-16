@@ -1,8 +1,8 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   convertUnits,
   getSupportedConversions
-} = require("../controllers/unitConversion.controller.js");
+} from "../controllers/unitConversion.controller.js";
 
 const router = express.Router();
 
@@ -10,4 +10,4 @@ const router = express.Router();
 router.get("/convert", convertUnits);
 router.get("/supported", getSupportedConversions);
 
-module.exports = router;
+export default router;
