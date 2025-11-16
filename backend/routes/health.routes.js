@@ -1,20 +1,20 @@
-const express = require('express');
-const {
+import express from "express";
+import {
   healthCheck,
   readinessCheck,
   getMetrics,
   checkDependencies
-} = require('../controllers/health.controller.js');
-const { enhancedAuth } = require('../middlewares/sessionManager.js');
+} from "../controllers/health.controller.js";
+import { enhancedAuth } from "../middlewares/sessionManager.js";
 
 const healthRouter = express.Router();
 
 // Public health endpoints
-healthRouter.get('/health', healthCheck);
-healthRouter.get('/ready', readinessCheck);
-healthRouter.get('/dependencies', checkDependencies);
+healthRouter.get("/health", healthCheck);
+healthRouter.get("/ready", readinessCheck);
+healthRouter.get("/dependencies", checkDependencies);
 
 // Protected metrics endpoint
-healthRouter.get('/metrics', enhancedAuth, getMetrics);
+healthRouter.get("/metrics", enhancedAuth, getMetrics);
 
-module.exports = healthRouter;
+export default healthRouter;
