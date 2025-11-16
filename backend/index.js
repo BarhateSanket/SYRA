@@ -21,7 +21,7 @@ import monitoringRouter from "./routes/monitoring.routes.js";
 import analyticsRouter from "./routes/analytics.routes.js";
 import metricsRouter from "./routes/metrics.routes.js";
 
-// ESM Routers
+// ES Routers
 import currencyRouter from "./routes/currency.routes.js";
 import unitConversionRouter from "./routes/unitConversion.routes.js";
 
@@ -34,7 +34,7 @@ import { swaggerUi, specs } from "./config/swagger.js";
 
 // Security & Monitoring Middleware
 import rateLimiter from "./middlewares/rateLimiter.js";
-import { securityHeaders, customSecurityHeaders } from "./middlewares/securityHeaders.js";
+import securityHeaders, { customSecurityHeaders } from "./middlewares/securityHeaders.js";
 import apiLogger from "./middlewares/apiLogger.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import { metricsMiddleware } from "./controllers/metrics.controller.js";
@@ -52,6 +52,7 @@ import { cacheMiddleware } from "./middlewares/cache.js";
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 
+// =============== SENTRY INIT (ONLY ONCE!) ===============
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   integrations: [
@@ -62,6 +63,7 @@ Sentry.init({
   tracesSampleRate: 1.0,
   profilesSampleRate: 1.0,
 });
+// ========================================================
 
 const app = express();
 app.set("trust proxy", 1);
@@ -106,7 +108,7 @@ app.use("/api/health", healthRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/analytics", analyticsRouter);
 
-// Prometheus Metrics
+// Metrics
 app.use(metricsRouter);
 
 // Swagger
@@ -126,16 +128,3 @@ app.listen(port, () => {
 });
 
 export default app;
-
-// Sentry
-Sentry.init({
-  dsn: process.env.SENTRY_DSN,
-  integrations: [
-    Sentry.httpIntegration(),
-    Sentry.consoleIntegration(),
-    nodeProfilingIntegration(),
-  ],
-  tracesSampleRate: 1.0,
-  profilesSampleRate: 1.0,
-});
-// END OF FILE
