@@ -1,12 +1,13 @@
-const express = require("express");
-const {
+import express from "express";
+import {
   createReminder,
   getReminders,
   updateReminder,
   deleteReminder,
   markCompleted
-} = require("../controllers/reminders.controller.js");
-const isAuth = require("../middlewares/isAuth.js");
+} from "../controllers/reminders.controller.js";
+
+import isAuth from "../middlewares/isAuth.js";
 
 const router = express.Router();
 
@@ -20,4 +21,5 @@ router.put("/:id", updateReminder);
 router.delete("/:id", deleteReminder);
 router.patch("/:id/complete", markCompleted);
 
-module.exports = router;
+// IMPORTANT for ES module import in index.js
+export default router;
