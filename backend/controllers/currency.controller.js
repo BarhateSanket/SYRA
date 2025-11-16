@@ -1,11 +1,11 @@
-const axios = require("axios");
-const {
+import axios from "axios";
+import {
   EXCHANGE_RATE_API_KEY,
   EXCHANGE_RATE_BASE_URL
-} = require("../config/currency.js");
+} from "../config/currency.js";
 
 // Convert Currency
-const convertCurrency = async (req, res) => {
+export const convertCurrency = async (req, res) => {
   try {
     const { from = "USD", to = "EUR", amount = 1 } = req.query;
 
@@ -46,6 +46,7 @@ const convertCurrency = async (req, res) => {
       message: `Converted ${amount} ${from.toUpperCase()} to ${to.toUpperCase()}`,
       data: conversionData,
     });
+
   } catch (error) {
     console.error("Currency API Error:", error.response?.data || error.message);
 
@@ -58,7 +59,7 @@ const convertCurrency = async (req, res) => {
 };
 
 // Get Exchange Rates
-const getExchangeRates = async (req, res) => {
+export const getExchangeRates = async (req, res) => {
   try {
     const { base = "USD" } = req.query;
 
@@ -96,6 +97,7 @@ const getExchangeRates = async (req, res) => {
       message: `Exchange rates for ${base.toUpperCase()}`,
       data: ratesData,
     });
+
   } catch (error) {
     console.error("Exchange Rates API Error:", error.response?.data || error.message);
 
@@ -108,7 +110,7 @@ const getExchangeRates = async (req, res) => {
 };
 
 // Get Supported Currencies
-const getSupportedCurrencies = async (req, res) => {
+export const getSupportedCurrencies = async (req, res) => {
   try {
     if (
       !EXCHANGE_RATE_API_KEY ||
@@ -127,8 +129,7 @@ const getSupportedCurrencies = async (req, res) => {
     if (response.data.result === "error") {
       return res.status(500).json({
         success: false,
-        message:
-          response.data["error-type"] || "Failed to fetch supported currencies",
+        message: response.data["error-type"] || "Failed to fetch supported currencies",
         data: null,
       });
     }
@@ -143,11 +144,9 @@ const getSupportedCurrencies = async (req, res) => {
       message: "Supported currencies fetched successfully",
       data: currenciesData,
     });
+
   } catch (error) {
-    console.error(
-      "Supported Currencies API Error:",
-      error.response?.data || error.message
-    );
+    console.error("Supported Currencies API Error:", error.response?.data || error.message);
 
     res.status(500).json({
       success: false,
@@ -155,10 +154,4 @@ const getSupportedCurrencies = async (req, res) => {
       data: null,
     });
   }
-};
-
-module.exports = {
-  convertCurrency,
-  getExchangeRates,
-  getSupportedCurrencies,
 };
