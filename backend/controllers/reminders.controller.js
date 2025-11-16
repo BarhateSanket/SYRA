@@ -1,12 +1,12 @@
-const Reminder = require("../models/reminder.model");
-const cron = require("node-cron");
-const { getGeminiResponse } = require("../gemini");
+import Reminder from "../models/reminder.model.js";
+import cron from "node-cron";
+import { getGeminiResponse } from "../gemini.js";
 
 // ---------------- CREATE REMINDER ----------------
-const createReminder = async (req, res) => {
+export const createReminder = async (req, res) => {
   try {
     const { title, description, type, scheduledTime, isRecurring, recurrencePattern } = req.body;
-    const userId = req.user.id;
+    const userId = req.user?.id;
 
     if (!title || !scheduledTime) {
       return res.status(400).json({
@@ -28,7 +28,6 @@ const createReminder = async (req, res) => {
 
     await reminder.save();
 
-    // Schedule
     if (!isRecurring) scheduleReminder(reminder);
     else scheduleRecurringReminder(reminder);
 
@@ -39,19 +38,14 @@ const createReminder = async (req, res) => {
     });
   } catch (error) {
     console.error("Create reminder error:", error.message);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to create reminder",
-      data: null,
-    });
+    res.status(500).json({ success: false, message: "Failed to create reminder" });
   }
 };
 
 // ---------------- GET REMINDERS ----------------
-const getReminders = async (req, res) => {
+export const getReminders = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user?.id;
     const { type, isActive = true, limit = 50 } = req.query;
 
     const query = { userId, isActive: isActive === "true" };
@@ -69,34 +63,24 @@ const getReminders = async (req, res) => {
     });
   } catch (error) {
     console.error("Get reminders error:", error.message);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to retrieve reminders",
-      data: null,
-    });
+    res.status(500).json({ success: false, message: "Failed to retrieve reminders" });
   }
 };
 
 // ---------------- UPDATE REMINDER ----------------
-const updateReminder = async (req, res) => {
+export const updateReminder = async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { id } = req.params;
-    const userId = req.user.id;
-    const updates = req.body;
 
     const reminder = await Reminder.findOneAndUpdate(
       { _id: id, userId },
-      { ...updates, updatedAt: new Date() },
+      { ...req.body, updatedAt: new Date() },
       { new: true }
     );
 
     if (!reminder) {
-      return res.status(404).json({
-        success: false,
-        message: "Reminder not found",
-        data: null,
-      });
+      return res.status(404).json({ success: false, message: "Reminder not found" });
     }
 
     res.json({
@@ -106,29 +90,20 @@ const updateReminder = async (req, res) => {
     });
   } catch (error) {
     console.error("Update reminder error:", error.message);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to update reminder",
-      data: null,
-    });
+    res.status(500).json({ success: false, message: "Failed to update reminder" });
   }
 };
 
 // ---------------- DELETE REMINDER ----------------
-const deleteReminder = async (req, res) => {
+export const deleteReminder = async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { id } = req.params;
-    const userId = req.user.id;
 
     const reminder = await Reminder.findOneAndDelete({ _id: id, userId });
 
     if (!reminder) {
-      return res.status(404).json({
-        success: false,
-        message: "Reminder not found",
-        data: null,
-      });
+      return res.status(404).json({ success: false, message: "Reminder not found" });
     }
 
     res.json({
@@ -138,20 +113,15 @@ const deleteReminder = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete reminder error:", error.message);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete reminder",
-      data: null,
-    });
+    res.status(500).json({ success: false, message: "Failed to delete reminder" });
   }
 };
 
 // ---------------- MARK COMPLETED ----------------
-const markCompleted = async (req, res) => {
+export const markCompleted = async (req, res) => {
   try {
+    const userId = req.user?.id;
     const { id } = req.params;
-    const userId = req.user.id;
 
     const reminder = await Reminder.findOneAndUpdate(
       { _id: id, userId },
@@ -160,11 +130,7 @@ const markCompleted = async (req, res) => {
     );
 
     if (!reminder) {
-      return res.status(404).json({
-        success: false,
-        message: "Reminder not found",
-        data: null,
-      });
+      return res.status(404).json({ success: false, message: "Reminder not found" });
     }
 
     res.json({
@@ -174,12 +140,7 @@ const markCompleted = async (req, res) => {
     });
   } catch (error) {
     console.error("Mark completed error:", error.message);
-
-    res.status(500).json({
-      success: false,
-      message: "Failed to mark reminder as completed",
-      data: null,
-    });
+    res.status(500).json({ success: false, message: "Failed to mark reminder as completed" });
   }
 };
 
@@ -187,32 +148,23 @@ const markCompleted = async (req, res) => {
 // ---------------- SCHEDULING HELPERS ------------------
 // ======================================================
 
-// ONE-TIME REMINDER
 function scheduleReminder(reminder) {
   const now = new Date();
   const scheduled = new Date(reminder.scheduledTime);
-
   if (scheduled <= now) return triggerReminder(reminder);
 
   const delay = scheduled - now;
 
-  setTimeout(() => {
-    triggerReminder(reminder);
-  }, delay);
+  setTimeout(() => triggerReminder(reminder), delay);
 }
 
-// RECURRING REMINDER
 function scheduleRecurringReminder(reminder) {
   const cronExp = getCronExpression(reminder.recurrencePattern, reminder.scheduledTime);
-  if (!cronExp) {
-    console.error("Invalid recurrence pattern:", reminder._id);
-    return;
-  }
+  if (!cronExp) return;
 
   cron.schedule(cronExp, () => triggerReminder(reminder));
 }
 
-// CRON PATTERN BUILDER
 function getCronExpression(pattern, date) {
   const min = date.getMinutes();
   const hour = date.getHours();
@@ -234,10 +186,11 @@ function getCronExpression(pattern, date) {
   }
 }
 
-// ---------------- TRIGGER REMINDER ----------------
 async function triggerReminder(reminder) {
   try {
-    const prompt = `Generate a friendly reminder message for: "${reminder.title}"${reminder.description ? ` - ${reminder.description}` : ""}`;
+    const prompt = `Generate a friendly reminder message for: "${reminder.title}" ${
+      reminder.description ? ` - ${reminder.description}` : ""
+    }`;
 
     const ai = await getGeminiResponse(prompt);
 
@@ -255,7 +208,7 @@ async function triggerReminder(reminder) {
 }
 
 // ---------------- INITIALIZATION ----------------
-const initializeReminders = async () => {
+export const initializeReminders = async () => {
   try {
     const active = await Reminder.find({ isActive: true });
 
@@ -271,14 +224,4 @@ const initializeReminders = async () => {
   } catch (error) {
     console.error("Error initializing reminders:", error);
   }
-};
-
-// EXPORT
-module.exports = {
-  createReminder,
-  getReminders,
-  updateReminder,
-  deleteReminder,
-  markCompleted,
-  initializeReminders,
 };
