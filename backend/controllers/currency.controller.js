@@ -1,24 +1,29 @@
-import axios from 'axios';
-import { EXCHANGE_RATE_API_KEY, EXCHANGE_RATE_BASE_URL } from '../config/currency.js';
+const axios = require("axios");
+const {
+  EXCHANGE_RATE_API_KEY,
+  EXCHANGE_RATE_BASE_URL
+} = require("../config/currency.js");
 
+// Convert Currency
 const convertCurrency = async (req, res) => {
   try {
-    const { from = 'USD', to = 'EUR', amount = 1 } = req.query;
+    const { from = "USD", to = "EUR", amount = 1 } = req.query;
 
-    if (!EXCHANGE_RATE_API_KEY || EXCHANGE_RATE_API_KEY === 'your_exchange_rate_api_key_here') {
+    if (!EXCHANGE_RATE_API_KEY || EXCHANGE_RATE_API_KEY === "your_exchange_rate_api_key_here") {
       return res.status(500).json({
         success: false,
-        message: 'Currency API key not configured',
+        message: "Currency API key not configured",
         data: null
       });
     }
 
-    const response = await axios.get(`${EXCHANGE_RATE_BASE_URL}/${EXCHANGE_RATE_API_KEY}/pair/${from.toUpperCase()}/${to.toUpperCase()}/${amount}`);
+    const url = `${EXCHANGE_RATE_BASE_URL}/${EXCHANGE_RATE_API_KEY}/pair/${from.toUpperCase()}/${to.toUpperCase()}/${amount}`;
+    const response = await axios.get(url);
 
-    if (response.data.result === 'error') {
+    if (response.data.result === "error") {
       return res.status(400).json({
         success: false,
-        message: response.data['error-type'] || 'Invalid currency conversion request',
+        message: response.data["error-type"] || "Invalid currency conversion request",
         data: null
       });
     }
@@ -40,42 +45,36 @@ const convertCurrency = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Currency conversion API error:', error.response?.data || error.message);
-
-    if (error.response?.status === 401) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid Currency API key',
-        data: null
-      });
-    }
+    console.error("Currency API Error:", error.response?.data || error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to convert currency',
+      message: "Failed to convert currency",
       data: null
     });
   }
 };
 
+// Get Exchange Rates
 const getExchangeRates = async (req, res) => {
   try {
-    const { base = 'USD' } = req.query;
+    const { base = "USD" } = req.query;
 
-    if (!EXCHANGE_RATE_API_KEY || EXCHANGE_RATE_API_KEY === 'your_exchange_rate_api_key_here') {
+    if (!EXCHANGE_RATE_API_KEY || EXCHANGE_RATE_API_KEY === "your_exchange_rate_api_key_here") {
       return res.status(500).json({
         success: false,
-        message: 'Currency API key not configured',
+        message: "Currency API key not configured",
         data: null
       });
     }
 
-    const response = await axios.get(`${EXCHANGE_RATE_BASE_URL}/${EXCHANGE_RATE_API_KEY}/latest/${base.toUpperCase()}`);
+    const url = `${EXCHANGE_RATE_BASE_URL}/${EXCHANGE_RATE_API_KEY}/latest/${base.toUpperCase()}`;
+    const response = await axios.get(url);
 
-    if (response.data.result === 'error') {
+    if (response.data.result === "error") {
       return res.status(400).json({
         success: false,
-        message: response.data['error-type'] || 'Invalid base currency',
+        message: response.data["error-type"] || "Invalid base currency",
         data: null
       });
     }
@@ -94,61 +93,61 @@ const getExchangeRates = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('Exchange rates API error:', error.response?.data || error.message);
+    console.error("Exchange Rates API Error:", error.response?.data || error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch exchange rates',
+      message: "Failed to fetch exchange rates",
       data: null
     });
   }
 };
 
+// Get Supported Currencies
 const getSupportedCurrencies = async (req, res) => {
   try {
-    if (!EXCHANGE_RATE_API_KEY || EXCHANGE_RATE_API_KEY === 'your_exchange_rate_api_key_here') {
+    if (!EXCHANGE_RATE_API_KEY || EXCHANGE_RATE_API_KEY === "your_exchange_rate_api_key_here") {
       return res.status(500).json({
         success: false,
-        message: 'Currency API key not configured',
+        message: "Currency API key not configured",
         data: null
       });
     }
 
-    const response = await axios.get(`${EXCHANGE_RATE_BASE_URL}/${EXCHANGE_RATE_API_KEY}/codes`);
+    const url = `${EXCHANGE_RATE_BASE_URL}/${EXCHANGE_RATE_API_KEY}/codes`;
+    const response = await axios.get(url);
 
-    if (response.data.result === 'error') {
+    if (response.data.result === "error") {
       return res.status(500).json({
         success: false,
-        message: response.data['error-type'] || 'Failed to fetch supported currencies',
+        message: response.data["error-type"] || "Failed to fetch supported currencies",
         data: null
       });
     }
 
-    const currenciesData = {
-      currencies: response.data.supported_codes.map(([code, name]) => ({
-        code,
-        name
-      }))
-    };
+    const currenciesData = response.data.supported_codes.map(([code, name]) => ({
+      code,
+      name
+    }));
 
     res.json({
       success: true,
-      message: 'Supported currencies fetched successfully',
+      message: "Supported currencies fetched successfully",
       data: currenciesData
     });
 
   } catch (error) {
-    console.error('Supported currencies API error:', error.response?.data || error.message);
+    console.error("Supported Currencies API Error:", error.response?.data || error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to fetch supported currencies',
+      message: "Failed to fetch supported currencies",
       data: null
     });
   }
 };
 
-export {
+module.exports = {
   convertCurrency,
   getExchangeRates,
   getSupportedCurrencies
