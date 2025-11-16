@@ -11,7 +11,6 @@ import githubRouter from "./routes/github.routes.js"
 import weatherRouter from "./routes/weather.routes.js"
 import newsRouter from "./routes/news.routes.js"
 import stocksRouter from "./routes/stocks.routes.js"
-import currencyRouter from "./routes/currency.routes.js"
 import unitConversionRouter from "./routes/unitConversion.routes.js"
 import remindersRouter from "./routes/reminders.routes.js"
 import smartHomeRouter from "./routes/smartHome.routes.js"
@@ -22,6 +21,7 @@ import metricsRouter from "./routes/metrics.routes.js"
 import geminiResponse from "./gemini.js"
 import { initializeReminders } from "./controllers/reminders.controller.js"
 import { initializeDemoDevices } from "./controllers/smartHome.controller.js"
+const currencyRouter = require("./routes/currency.routes.js");
 
 // Swagger documentation
 import { swaggerUi, specs } from "./config/swagger.js"
