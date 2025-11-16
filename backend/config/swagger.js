@@ -20,7 +20,7 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:5000',
+        url: 'https://syra-jaeg.onrender.com',
         description: 'Development server'
       },
       {
