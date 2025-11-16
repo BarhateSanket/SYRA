@@ -34,7 +34,7 @@ import { swaggerUi, specs } from "./config/swagger.js";
 
 // Security & Monitoring Middleware
 import rateLimiter from "./middlewares/rateLimiter.js";
-import securityHeaders from "./middlewares/securityHeaders.js";
+import { securityHeaders, customSecurityHeaders } from "./middlewares/securityHeaders.js";
 import apiLogger from "./middlewares/apiLogger.js";
 import errorHandler from "./middlewares/errorHandler.js";
 import { metricsMiddleware } from "./controllers/metrics.controller.js";
@@ -48,9 +48,7 @@ import redisClient from "./config/redis.js";
 // Optional Caching
 import { cacheMiddleware } from "./middlewares/cache.js";
 
-// =============================
-// FIXED SENTRY BLOCK
-// =============================
+// Sentry
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 
@@ -64,13 +62,13 @@ Sentry.init({
   tracesSampleRate: 1.0,
   profilesSampleRate: 1.0,
 });
-// =============================
 
 const app = express();
 app.set("trust proxy", 1);
 
 // Security + Logging
 app.use(securityHeaders);
+app.use(customSecurityHeaders);
 app.use(apiLogger);
 app.use(rateLimiter);
 
@@ -92,36 +90,32 @@ app.use(responseTime());
 // Prometheus
 app.use(metricsMiddleware);
 
-// API ROUTES
+// Routes
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/google", googleRouter);
 app.use("/api/github", githubRouter);
-
 app.use("/api/weather", weatherRouter);
 app.use("/api/news", newsRouter);
 app.use("/api/stocks", stocksRouter);
-
 app.use("/api/currency", currencyRouter);
 app.use("/api/units", unitConversionRouter);
-
 app.use("/api/reminders", remindersRouter);
 app.use("/api/smarthome", smartHomeRouter);
-
 app.use("/api/health", healthRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/analytics", analyticsRouter);
 
-// Prometheus Metrics endpoint
+// Prometheus Metrics
 app.use(metricsRouter);
 
-// Swagger Docs
+// Swagger
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-// Global Error Handler
+// Error Handler
 app.use(errorHandler);
 
-// Server Start
+// Start Server
 const port = process.env.PORT || 5000;
 
 app.listen(port, () => {
@@ -130,4 +124,18 @@ app.listen(port, () => {
   initializeDemoDevices();
   console.log(`Server running on port ${port} with full monitoring + security`);
 });
+
 export default app;
+
+// Sentry
+Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  integrations: [
+    Sentry.httpIntegration(),
+    Sentry.consoleIntegration(),
+    nodeProfilingIntegration(),
+  ],
+  tracesSampleRate: 1.0,
+  profilesSampleRate: 1.0,
+});
+// END OF FILE
