@@ -89,7 +89,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(responseTime());
 
-// Prometheus
+// Prometheus Metrics Middleware
 app.use(metricsMiddleware);
 
 // Routes
@@ -108,13 +108,13 @@ app.use("/api/health", healthRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/analytics", analyticsRouter);
 
-// Metrics
-app.use(metricsRouter);
+// FIXED: Metrics router MUST be mounted with a base path
+app.use("/api", metricsRouter);
 
 // Swagger
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-// Error Handler
+// Global Error Handler
 app.use(errorHandler);
 
 // Start Server
