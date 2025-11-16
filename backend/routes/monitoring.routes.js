@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import {
   getPerformanceMetrics,
   getErrorReports,
@@ -11,37 +11,50 @@ import {
   getRetentionAnalysis,
   getFeatureUsageStats,
   getSupportAnalytics
-} from '../controllers/monitoring.controller.js';
-import { enhancedAuth } from '../middlewares/sessionManager.js';
+} from "../controllers/monitoring.controller.js";
+import { enhancedAuth } from "../middlewares/sessionManager.js";
 
 const monitoringRouter = express.Router();
 
-// All monitoring routes require authentication
+// Auth required for all monitoring routes
 monitoringRouter.use(enhancedAuth);
 
-// Performance monitoring
-monitoringRouter.get('/performance', getPerformanceMetrics);
+// ─────────────────────────────────────────────
+// Monitoring & Analytics Routes
+// ─────────────────────────────────────────────
 
-// Error reporting and monitoring
-monitoringRouter.get('/errors', getErrorReports);
+// Performance
+monitoringRouter.get("/performance", getPerformanceMetrics);
 
-// User activity monitoring
-monitoringRouter.get('/activity', getUserActivity);
+// Error logs
+monitoringRouter.get("/errors", getErrorReports);
 
-// Security events monitoring
-monitoringRouter.get('/security', getSecurityEvents);
+// User activity
+monitoringRouter.get("/activity", getUserActivity);
 
-// Database metrics
-monitoringRouter.get('/database', getDatabaseMetrics);
+// Security monitoring
+monitoringRouter.get("/security", getSecurityEvents);
 
-// Business Intelligence & Analytics
-monitoringRouter.get('/revenue', getRevenueAnalytics);
-monitoringRouter.get('/acquisition', getUserAcquisitionMetrics);
-monitoringRouter.get('/retention', getRetentionAnalysis);
-monitoringRouter.get('/features', getFeatureUsageStats);
-monitoringRouter.get('/support', getSupportAnalytics);
+// Database stats
+monitoringRouter.get("/database", getDatabaseMetrics);
 
-// Client-side error reporting (public endpoint for error collection)
-monitoringRouter.post('/report-error', reportError);
+// Revenue + business analytics
+monitoringRouter.get("/revenue", getRevenueAnalytics);
+monitoringRouter.get("/acquisition", getUserAcquisitionMetrics);
+
+// Retention cohorts
+monitoringRouter.get("/retention", getRetentionAnalysis);
+
+// Feature usage analytics
+monitoringRouter.get("/features", getFeatureUsageStats);
+
+// Support/ticket analytics
+monitoringRouter.get("/support", getSupportAnalytics);
+
+// ─────────────────────────────────────────────
+// Public: Client-side error reporting
+// (Does NOT require authentication)
+// ─────────────────────────────────────────────
+monitoringRouter.post("/report-error", reportError);
 
 export default monitoringRouter;

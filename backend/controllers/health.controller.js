@@ -1,87 +1,105 @@
-const mongoose = require('mongoose');
-const os = require('os');
-const logger = require('../middlewares/apiLogger.js');
+import mongoose from "mongoose";
+import os from "os";
+import axios from "axios";
 
-// Health check endpoint
-const healthCheck = async (req, res) => {
+/* ---------------------------------------------------------
+   HEALTH CHECK
+--------------------------------------------------------- */
+export const healthCheck = async (req, res) => {
   try {
     const health = {
-      status: 'healthy',
+      status: "healthy",
       timestamp: new Date().toISOString(),
       uptime: process.uptime(),
       version: process.version,
-      environment: process.env.NODE_ENV || 'development'
+      environment: process.env.NODE_ENV || "development",
     };
 
-    // Database connectivity check
+    // DATABASE CHECK
     try {
-      await mongoose.connection.db.admin().ping();
-      health.database = {
-        status: 'connected',
-        name: mongoose.connection.name
-      };
+      if (mongoose.connection.readyState === 1) {
+        await mongoose.connection.db.admin().ping();
+        health.database = {
+          status: "connected",
+          name: mongoose.connection.name,
+        };
+      } else {
+        throw new Error("Mongoose not connected");
+      }
     } catch (dbError) {
-      health.status = 'unhealthy';
+      health.status = "unhealthy";
       health.database = {
-        status: 'disconnected',
-        error: dbError.message
+        status: "disconnected",
+        error: dbError.message,
       };
     }
 
-    // Memory usage
-    const memUsage = process.memoryUsage();
+    // MEMORY USAGE
+    const mem = process.memoryUsage();
     health.memory = {
-      rss: `${Math.round(memUsage.rss / 1024 / 1024)}MB`,
-      heapTotal: `${Math.round(memUsage.heapTotal / 1024 / 1024)}MB`,
-      heapUsed: `${Math.round(memUsage.heapUsed / 1024 / 1024)}MB`,
-      external: `${Math.round(memUsage.external / 1024 / 1024)}MB`
+      rss: `${(mem.rss / 1024 / 1024).toFixed(1)}MB`,
+      heapTotal: `${(mem.heapTotal / 1024 / 1024).toFixed(1)}MB`,
+      heapUsed: `${(mem.heapUsed / 1024 / 1024).toFixed(1)}MB`,
+      external: `${(mem.external / 1024 / 1024).toFixed(1)}MB`,
     };
 
-    // System info
+    // SYSTEM INFO
     health.system = {
       platform: os.platform(),
       arch: os.arch(),
       cpus: os.cpus().length,
-      totalMemory: `${Math.round(os.totalmem() / 1024 / 1024 / 1024)}GB`,
-      freeMemory: `${Math.round(os.freemem() / 1024 / 1024 / 1024)}GB`,
-      loadAverage: os.loadavg()
+      totalMemory: `${(os.totalmem() / 1024 / 1024 / 1024).toFixed(1)}GB`,
+      freeMemory: `${(os.freemem() / 1024 / 1024 / 1024).toFixed(1)}GB`,
+      loadAverage: os.loadavg(),
     };
 
-    const statusCode = health.status === 'healthy' ? 200 : 503;
-    res.status(statusCode).json(health);
+    const code = health.status === "healthy" ? 200 : 503;
+    res.status(code).json(health);
 
   } catch (error) {
-    logger.error('Health check failed', { error: error.message });
+    console.error("Health check failed:", error.message);
     res.status(503).json({
-      status: 'unhealthy',
+      status: "unhealthy",
+      error: error.message,
       timestamp: new Date().toISOString(),
-      error: error.message
     });
   }
 };
 
-// Readiness check (for Kubernetes/load balancers)
-const readinessCheck = async (req, res) => {
+/* ---------------------------------------------------------
+   READINESS CHECK
+--------------------------------------------------------- */
+export const readinessCheck = async (req, res) => {
   try {
-    // Check database connection
+    if (mongoose.connection.readyState !== 1) {
+      return res.status(503).json({
+        status: "not ready",
+        error: "Database not connected",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
     await mongoose.connection.db.admin().ping();
 
     res.status(200).json({
-      status: 'ready',
-      timestamp: new Date().toISOString()
-    });
-  } catch (error) {
-    logger.error('Readiness check failed', { error: error.message });
-    res.status(503).json({
-      status: 'not ready',
+      status: "ready",
       timestamp: new Date().toISOString(),
-      error: 'Database connection failed'
+    });
+
+  } catch (error) {
+    console.error("Readiness check failed:", error.message);
+    res.status(503).json({
+      status: "not ready",
+      error: error.message,
+      timestamp: new Date().toISOString(),
     });
   }
 };
 
-// Detailed metrics endpoint (protected)
-const getMetrics = async (req, res) => {
+/* ---------------------------------------------------------
+   METRICS (DETAILED)
+--------------------------------------------------------- */
+export const getMetrics = async (req, res) => {
   try {
     const metrics = {
       timestamp: new Date().toISOString(),
@@ -90,7 +108,7 @@ const getMetrics = async (req, res) => {
         uptime: process.uptime(),
         version: process.version,
         platform: process.platform,
-        arch: process.arch
+        arch: process.arch,
       },
       memory: process.memoryUsage(),
       cpu: process.cpuUsage(),
@@ -98,92 +116,93 @@ const getMetrics = async (req, res) => {
         totalMemory: os.totalmem(),
         freeMemory: os.freemem(),
         loadAverage: os.loadavg(),
-        uptime: os.uptime()
-      }
+        uptime: os.uptime(),
+      },
     };
 
-    // Database stats
+    // DATABASE STATS
     try {
-      const dbStats = await mongoose.connection.db.stats();
-      metrics.database = {
-        collections: dbStats.collections,
-        objects: dbStats.objects,
-        dataSize: dbStats.dataSize,
-        storageSize: dbStats.storageSize,
-        indexes: dbStats.indexes,
-        indexSize: dbStats.indexSize
-      };
-    } catch (dbError) {
-      metrics.database = { error: dbError.message };
+      if (mongoose.connection.readyState === 1) {
+        const stats = await mongoose.connection.db.stats();
+        metrics.database = stats;
+      } else {
+        throw new Error("Database not connected");
+      }
+    } catch (err) {
+      metrics.database = { error: err.message };
     }
 
     res.json(metrics);
+
   } catch (error) {
-    logger.error('Metrics retrieval failed', { error: error.message });
+    console.error("Metrics retrieval failed:", error.message);
     res.status(500).json({
-      error: 'Failed to retrieve metrics',
-      timestamp: new Date().toISOString()
+      error: "Failed to retrieve metrics",
+      timestamp: new Date().toISOString(),
     });
   }
 };
 
-// Service dependencies check
-const checkDependencies = async (req, res) => {
+/* ---------------------------------------------------------
+   DEPENDENCIES CHECK
+--------------------------------------------------------- */
+export const checkDependencies = async (req, res) => {
   const dependencies = {
     timestamp: new Date().toISOString(),
-    checks: {}
+    checks: {},
   };
 
-  // Database check
+  /* ----- Database Check ----- */
   try {
-    await mongoose.connection.db.admin().ping();
-    dependencies.checks.database = {
-      status: 'ok',
-      responseTime: Date.now()
-    };
+    if (mongoose.connection.readyState === 1) {
+      await mongoose.connection.db.admin().ping();
+      dependencies.checks.database = {
+        status: "ok",
+      };
+    } else {
+      dependencies.checks.database = {
+        status: "failed",
+        error: "Not connected",
+      };
+    }
   } catch (error) {
     dependencies.checks.database = {
-      status: 'failed',
-      error: error.message
+      status: "failed",
+      error: error.message,
     };
   }
 
-  // External API checks (example - add your actual external services)
-  const externalServices = [
-    { name: 'OpenAI', url: 'https://api.openai.com/v1/models' },
-    { name: 'GitHub API', url: 'https://api.github.com/zen' },
-    { name: 'Google APIs', url: 'https://www.googleapis.com/oauth2/v1/tokeninfo' }
+  /* ----- External Services Check ----- */
+  const services = [
+    { name: "OpenAI", url: "https://api.openai.com/v1/models" },
+    { name: "GitHub API", url: "https://api.github.com/zen" },
+    { name: "Google APIs", url: "https://www.googleapis.com/oauth2/v1/tokeninfo" },
   ];
 
-  for (const service of externalServices) {
+  for (const service of services) {
     try {
-      const axios = (await import('axios')).default;
       const start = Date.now();
       await axios.get(service.url, { timeout: 5000 });
+
       dependencies.checks[service.name] = {
-        status: 'ok',
-        responseTime: Date.now() - start
+        status: "ok",
+        responseTime: Date.now() - start,
       };
+
     } catch (error) {
       dependencies.checks[service.name] = {
-        status: 'failed',
-        error: error.message
+        status: "failed",
+        error: error.message,
       };
     }
   }
 
-  // Determine overall status
-  const allChecks = Object.values(dependencies.checks);
-  const hasFailures = allChecks.some(check => check.status === 'failed');
-  dependencies.status = hasFailures ? 'degraded' : 'healthy';
+  /* ----- Overall Status ----- */
+  const failures = Object.values(dependencies.checks).some(
+    (check) => check.status === "failed"
+  );
 
-  const statusCode = hasFailures ? 503 : 200;
-  res.status(statusCode).json(dependencies);
-};
+  dependencies.status = failures ? "degraded" : "healthy";
 
-module.exports = {
-  healthCheck,
-  readinessCheck,
-  getMetrics,
-  checkDependencies
+  res.status(failures ? 503 : 200).json(dependencies);
 };

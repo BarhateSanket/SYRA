@@ -14,7 +14,7 @@ import { enhancedAuth } from '../middlewares/sessionManager.js';
 
 const analyticsRouter = express.Router();
 
-// All analytics routes require authentication
+// Require authentication for all analytics routes
 analyticsRouter.use(enhancedAuth);
 
 // Event tracking

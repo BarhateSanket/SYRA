@@ -1,6 +1,12 @@
-import express from 'express';
-import { createReminder, getReminders, updateReminder, deleteReminder, markCompleted } from '../controllers/reminders.controller.js';
-import isAuth from '../middlewares/isAuth.js';
+const express = require("express");
+const {
+  createReminder,
+  getReminders,
+  updateReminder,
+  deleteReminder,
+  markCompleted
+} = require("../controllers/reminders.controller.js");
+const isAuth = require("../middlewares/isAuth.js");
 
 const router = express.Router();
 
@@ -8,10 +14,10 @@ const router = express.Router();
 router.use(isAuth);
 
 // Reminder routes
-router.post('/', createReminder);
-router.get('/', getReminders);
-router.put('/:id', updateReminder);
-router.delete('/:id', deleteReminder);
-router.patch('/:id/complete', markCompleted);
+router.post("/", createReminder);
+router.get("/", getReminders);
+router.put("/:id", updateReminder);
+router.delete("/:id", deleteReminder);
+router.patch("/:id/complete", markCompleted);
 
-export default router;
+module.exports = router;

@@ -1,4 +1,5 @@
 import express from "express";
+
 import {
   askToAssistant,
   getCurrentUser,
@@ -35,14 +36,8 @@ const userRouter = express.Router();
  *     responses:
  *       200:
  *         description: User data retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/User'
  *       401:
  *         description: Unauthorized
- *       404:
- *         description: User not found
  */
 userRouter.get("/current", isAuth, getCurrentUser);
 
@@ -63,32 +58,21 @@ userRouter.get("/current", isAuth, getCurrentUser);
  *             properties:
  *               assistantName:
  *                 type: string
- *                 description: Assistant name
  *               assistantImage:
  *                 type: string
  *                 format: binary
- *                 description: Assistant image file
  *               imageUrl:
  *                 type: string
- *                 description: Image URL (alternative to file upload)
  *     responses:
  *       200:
  *         description: Assistant updated successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                 user:
- *                   $ref: '#/components/schemas/User'
- *       400:
- *         description: Bad request
- *       401:
- *         description: Unauthorized
  */
-userRouter.post("/update", isAuth, upload.single("assistantImage"), updateAssistant);
+userRouter.post(
+  "/update",
+  isAuth,
+  upload.single("assistantImage"),
+  updateAssistant
+);
 
 /**
  * @swagger
@@ -110,28 +94,9 @@ userRouter.post("/update", isAuth, upload.single("assistantImage"), updateAssist
  *             properties:
  *               command:
  *                 type: string
- *                 description: Voice command to process
  *     responses:
  *       200:
- *         description: Command processed successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 type:
- *                   type: string
- *                   description: Command type (youtube-search, etc.)
- *                 userInput:
- *                   type: string
- *                   description: Processed user input
- *                 response:
- *                   type: string
- *                   description: Assistant response
- *       400:
- *         description: Bad request
- *       401:
- *         description: Unauthorized
+ *         description: Command processed
  */
 userRouter.post("/asktoassistant", isAuth, askToAssistant);
 
@@ -151,19 +116,9 @@ userRouter.post("/asktoassistant", isAuth, askToAssistant);
  *               - name
  *               - email
  *               - message
- *             properties:
- *               name:
- *                 type: string
- *               email:
- *                 type: string
- *                 format: email
- *               message:
- *                 type: string
  *     responses:
  *       200:
- *         description: Message sent successfully
- *       400:
- *         description: Bad request
+ *         description: Message sent
  */
 userRouter.post("/contact", contactForm);
 
@@ -171,16 +126,11 @@ userRouter.post("/contact", contactForm);
  * @swagger
  * /api/user/analytics:
  *   get:
- *     summary: Get user analytics
- *     tags: [User, Analytics]
+ *     summary: Get analytics (Premium only)
+ *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: Analytics data retrieved
- *       401:
- *         description: Unauthorized
  */
 userRouter.get("/analytics", isAuth, getAnalytics);
 
@@ -188,25 +138,11 @@ userRouter.get("/analytics", isAuth, getAnalytics);
  * @swagger
  * /api/user/voice-training:
  *   post:
- *     summary: Update voice training data
+ *     summary: Update voice training
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               trainingData:
- *                 type: object
- *     responses:
- *       200:
- *         description: Voice training updated
- *       401:
- *         description: Unauthorized
  */
 userRouter.post("/voice-training", isAuth, updateVoiceTraining);
 
@@ -214,36 +150,22 @@ userRouter.post("/voice-training", isAuth, updateVoiceTraining);
  * @swagger
  * /api/user/export-conversation:
  *   post:
- *     summary: Export conversation history
+ *     summary: Export user conversation history
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               format:
- *                 type: string
- *                 enum: [json, csv, txt]
- *                 default: json
- *     responses:
- *       200:
- *         description: Conversation exported
- *       401:
- *         description: Unauthorized
  */
 userRouter.post("/export-conversation", isAuth, exportConversation);
 
-// Payment & Subscription routes
+/* -------------------- PAYMENT / SUBSCRIPTIONS -------------------- */
+
 /**
  * @swagger
  * /api/user/subscription:
  *   post:
- *     summary: Create new subscription
- *     tags: [Payment, Subscription]
+ *     summary: Create subscription
+ *     tags: [Subscription]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
@@ -254,15 +176,11 @@ userRouter.post("/export-conversation", isAuth, exportConversation);
  *           schema:
  *             type: object
  *             required:
- *               - planId
+ *               - planType
  *             properties:
- *               planId:
+ *               planType:
  *                 type: string
- *     responses:
- *       200:
- *         description: Subscription created
- *       401:
- *         description: Unauthorized
+ *                 enum: [monthly, yearly]
  */
 userRouter.post("/subscription", isAuth, createSubscription);
 
@@ -271,15 +189,10 @@ userRouter.post("/subscription", isAuth, createSubscription);
  * /api/user/subscription:
  *   get:
  *     summary: Get current subscription
- *     tags: [Payment, Subscription]
+ *     tags: [Subscription]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: Subscription data retrieved
- *       401:
- *         description: Unauthorized
  */
 userRouter.get("/subscription", isAuth, getSubscription);
 
@@ -288,15 +201,10 @@ userRouter.get("/subscription", isAuth, getSubscription);
  * /api/user/subscription/cancel:
  *   post:
  *     summary: Cancel subscription
- *     tags: [Payment, Subscription]
+ *     tags: [Subscription]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: Subscription cancelled
- *       401:
- *         description: Unauthorized
  */
 userRouter.post("/subscription/cancel", isAuth, cancelSubscription);
 
@@ -304,16 +212,11 @@ userRouter.post("/subscription/cancel", isAuth, cancelSubscription);
  * @swagger
  * /api/user/billing-history:
  *   get:
- *     summary: Get billing history
+ *     summary: Get billing/payment history
  *     tags: [Payment]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
- *     responses:
- *       200:
- *         description: Billing history retrieved
- *       401:
- *         description: Unauthorized
  */
 userRouter.get("/billing-history", isAuth, getBillingHistory);
 
@@ -332,11 +235,6 @@ userRouter.get("/billing-history", isAuth, getBillingHistory);
  *         required: true
  *         schema:
  *           type: string
- *     responses:
- *       200:
- *         description: Invoice generated
- *       401:
- *         description: Unauthorized
  */
 userRouter.post("/invoice/:paymentId", isAuth, generateInvoice);
 
@@ -344,17 +242,13 @@ userRouter.post("/invoice/:paymentId", isAuth, generateInvoice);
  * @swagger
  * /api/user/webhook:
  *   post:
- *     summary: Handle payment webhook
+ *     summary: Handle Razorpay webhook
  *     tags: [Payment]
- *     requestBody:
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *     responses:
- *       200:
- *         description: Webhook processed
  */
-userRouter.post("/webhook", express.raw({ type: "application/json" }), handleWebhook);
+userRouter.post(
+  "/webhook",
+  express.raw({ type: "application/json" }),
+  handleWebhook
+);
 
 export default userRouter;

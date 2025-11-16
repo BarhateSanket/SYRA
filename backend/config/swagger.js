@@ -50,7 +50,10 @@ const options = {
             email: { type: 'string', format: 'email' },
             assistantName: { type: 'string' },
             assistantImage: { type: 'string' },
-            history: { type: 'array', items: { type: 'string' } },
+            history: {
+              type: 'array',
+              items: { type: 'string' }
+            },
             createdAt: { type: 'string', format: 'date-time' },
             updatedAt: { type: 'string', format: 'date-time' }
           }
@@ -66,12 +69,8 @@ const options = {
       }
     },
     security: [
-      {
-        bearerAuth: []
-      },
-      {
-        cookieAuth: []
-      }
+      { bearerAuth: [] },
+      { cookieAuth: [] }
     ]
   },
   apis: [

@@ -13,21 +13,21 @@ import isAuth from '../middlewares/isAuth.js';
 
 const router = express.Router();
 
-// Gmail routes
+// Gmail
 router.get('/gmail/read', isAuth, readEmails);
 router.post('/gmail/send', isAuth, sendEmail);
 
-// Calendar routes
+// Calendar
 router.get('/calendar/events', isAuth, getCalendarEvents);
 router.post('/calendar/events', isAuth, createCalendarEvent);
 
-// Drive routes
+// Google Drive
 router.get('/drive/files', isAuth, listDriveFiles);
 
-// Photos routes
+// Google Photos
 router.get('/photos/search', isAuth, searchPhotos);
 
-// YouTube routes
+// YouTube
 router.get('/youtube/playlists', isAuth, getPlaylists);
 router.get('/youtube/subscriptions', isAuth, getSubscriptions);
 

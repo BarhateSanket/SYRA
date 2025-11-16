@@ -1,89 +1,116 @@
-import promClient from 'prom-client';
+import promClient from "prom-client";
 
-// Create a Registry which registers the metrics
+// Create a Registry for all metrics
 const register = new promClient.Registry();
 
-// Add a default label which is added to all metrics
+// Default labels for all metrics
 register.setDefaultLabels({
-  app: 'syra-backend'
+  app: "syra-backend",
 });
 
-// Enable the collection of default metrics
+// Collect default Node.js metrics (memory, CPU, event loop)
 promClient.collectDefaultMetrics({ register });
 
-// Create custom metrics
-const httpRequestDurationMicroseconds = new promClient.Histogram({
-  name: 'http_request_duration_seconds',
-  help: 'Duration of HTTP requests in seconds',
-  labelNames: ['method', 'route', 'status_code'],
-  buckets: [0.1, 0.5, 1, 2, 5, 10]
+/* ---------------------------------------------------------
+   CUSTOM METRICS
+--------------------------------------------------------- */
+
+// HTTP Request Duration Histogram
+const httpRequestDurationSeconds = new promClient.Histogram({
+  name: "http_request_duration_seconds",
+  help: "Duration of HTTP requests in seconds",
+  labelNames: ["method", "route", "status_code"],
+  buckets: [0.1, 0.5, 1, 2, 5, 10],
 });
 
+// Total HTTP Requests
 const httpRequestsTotal = new promClient.Counter({
-  name: 'http_requests_total',
-  help: 'Total number of HTTP requests',
-  labelNames: ['method', 'route', 'status_code']
+  name: "http_requests_total",
+  help: "Total number of HTTP requests",
+  labelNames: ["method", "route", "status_code"],
 });
 
+// Active Connections
 const activeConnections = new promClient.Gauge({
-  name: 'active_connections',
-  help: 'Number of active connections'
+  name: "active_connections",
+  help: "Number of active connections",
 });
 
+// Database Query Duration
 const databaseQueryDuration = new promClient.Histogram({
-  name: 'database_query_duration_seconds',
-  help: 'Duration of database queries in seconds',
-  labelNames: ['operation', 'collection'],
-  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5]
+  name: "database_query_duration_seconds",
+  help: "Duration of database queries in seconds",
+  labelNames: ["operation", "collection"],
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
 });
 
-// Register custom metrics
-register.registerMetric(httpRequestDurationMicroseconds);
+// Register metrics
+register.registerMetric(httpRequestDurationSeconds);
 register.registerMetric(httpRequestsTotal);
 register.registerMetric(activeConnections);
 register.registerMetric(databaseQueryDuration);
 
-// Middleware to track HTTP requests
+/* ---------------------------------------------------------
+   MIDDLEWARE: Track HTTP Request Metrics
+--------------------------------------------------------- */
 export const metricsMiddleware = (req, res, next) => {
   const start = Date.now();
 
-  res.on('finish', () => {
-    const duration = (Date.now() - start) / 1000;
+  // When response completes
+  res.on("finish", () => {
+    const duration = (Date.now() - start) / 1000; // seconds
 
-    httpRequestDurationMicroseconds
-      .labels(req.method, req.route?.path || req.path, res.statusCode.toString())
+    // Safe route name extraction
+    const route =
+      req.route?.path ||
+      req.originalUrl ||
+      req.url ||
+      "unknown_route";
+
+    // Observe duration
+    httpRequestDurationSeconds
+      .labels(req.method, route, res.statusCode.toString())
       .observe(duration);
 
+    // Count total requests
     httpRequestsTotal
-      .labels(req.method, req.route?.path || req.path, res.statusCode.toString())
+      .labels(req.method, route, res.statusCode.toString())
       .inc();
   });
 
   next();
 };
 
-// Metrics endpoint
+/* ---------------------------------------------------------
+   METRICS ENDPOINT
+--------------------------------------------------------- */
 export const getMetrics = async (req, res) => {
   try {
-    res.set('Content-Type', register.contentType);
-    const metrics = await register.metrics();
-    res.end(metrics);
+    res.set("Content-Type", register.contentType);
+    const metricsData = await register.metrics();
+    res.end(metricsData);
   } catch (error) {
-    console.error('Error generating metrics:', error);
-    res.status(500).end();
+    console.error("Error generating metrics:", error);
+    res.status(500).end("Failed to generate metrics");
   }
 };
 
-// Update active connections
+/* ---------------------------------------------------------
+   ACTIVE CONNECTIONS
+--------------------------------------------------------- */
 export const updateActiveConnections = (count) => {
   activeConnections.set(count);
 };
 
-// Database query tracking
-export const trackDatabaseQuery = (operation, collection, duration) => {
+/* ---------------------------------------------------------
+   TRACK DATABASE QUERY TIME
+--------------------------------------------------------- */
+export const trackDatabaseQuery = (operation, collection, durationMs) => {
+  const durationSec = durationMs / 1000;
+
   databaseQueryDuration
     .labels(operation, collection)
-    .observe(duration / 1000); // Convert to seconds
+    .observe(durationSec);
 };
 
 export { register };

@@ -4,33 +4,35 @@ import bcrypt from "bcryptjs";
 import speakeasy from "speakeasy";
 import qrcode from "qrcode";
 import crypto from "crypto";
-import nodemailer from "nodemailer";
-import logger from "../middlewares/apiLogger.js";
+import logger from "../utils/logger.js";   // <-- FIXED logger import
 
 /**
- * Helper to remove sensitive fields before sending user object
+ * Remove sensitive fields before sending user
  */
 const sanitizeUser = (userDoc) => {
   const user = userDoc.toObject ? userDoc.toObject() : { ...userDoc };
-  if (user.password) delete user.password;
+  delete user.password;
+  delete user.twoFactorSecret;
+  delete user.backupCodes;
   return user;
 };
 
+/* -----------------------------------------------------------
+   SIGNUP
+----------------------------------------------------------- */
 export const signUp = async (req, res) => {
   try {
     const { name, email, password } = req.body;
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password)
       return res.status(400).json({ message: "Name, email and password are required" });
-    }
 
     const existEmail = await User.findOne({ email });
-    if (existEmail) {
-      return res.status(400).json({ message: "Email already exists!" });
-    }
-    if (password.length < 6) {
-      return res.status(400).json({ message: "Password must be at least 6 characters!" });
-    }
+    if (existEmail)
+      return res.status(400).json({ message: "Email already exists" });
+
+    if (password.length < 6)
+      return res.status(400).json({ message: "Password must be 6+ characters" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -42,40 +44,70 @@ export const signUp = async (req, res) => {
 
     const token = genToken(user._id);
 
-    // Set secure cookie for cross-site (Vercel frontend -> Render backend)
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,       // required on HTTPS
-      sameSite: "none",   // required for cross-site cookies
+      secure: true,
+      sameSite: "none",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
 
     return res.status(201).json(sanitizeUser(user));
   } catch (error) {
-    console.error("Signup error:", error);
-    return res.status(500).json({ message: `Signup error: ${error.message || error}` });
+    logger.error("Signup error", error.message);
+    res.status(500).json({ message: "Signup failed" });
   }
 };
 
+/* -----------------------------------------------------------
+   LOGIN (2FA-aware)
+----------------------------------------------------------- */
 export const Login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
+    if (!email || !password)
+      return res.status(400).json({ message: "Email & password required" });
+
+    const user = await User.findOne({ email }).select("+password +twoFactorEnabled");
+
+    if (!user)
+      return res.status(400).json({ message: "Email does not exist" });
+
+    // Account lock check
+    if (user.lockUntil && user.lockUntil > Date.now()) {
+      return res.status(403).json({
+        message: "Too many attempts. Account locked. Try again later."
+      });
     }
 
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ message: "Email does not exist!" });
-    }
-    const isMatch = await bcrypt.compare(password, user.password);
+    const match = await bcrypt.compare(password, user.password);
 
-    if (!isMatch) {
-      return res.status(400).json({ message: "Incorrect password!" });
+    if (!match) {
+      user.loginAttempts += 1;
+
+      if (user.loginAttempts >= 5) {
+        user.lockUntil = Date.now() + 15 * 60 * 1000; // 15 minutes
+      }
+      await user.save();
+
+      return res.status(400).json({ message: "Incorrect password" });
     }
 
+    // Reset lock
+    user.loginAttempts = 0;
+    user.lockUntil = undefined;
+    await user.save();
+
+    // If 2FA enabled → DO NOT LOGIN YET
+    if (user.twoFactorEnabled) {
+      return res.json({
+        requires2FA: true,
+        message: "2FA verification required"
+      });
+    }
+
+    // No 2FA → normal login
     const token = genToken(user._id);
 
     res.cookie("token", token, {
@@ -86,195 +118,188 @@ export const Login = async (req, res) => {
       path: "/",
     });
 
-    return res.status(200).json(sanitizeUser(user));
+    return res.json(sanitizeUser(user));
+
   } catch (error) {
-    console.error("Login error:", error);
-    return res.status(500).json({ message: `Login error: ${error.message || error}` });
+    logger.error("Login error", error.message);
+    res.status(500).json({ message: "Login failed" });
   }
 };
 
+/* -----------------------------------------------------------
+   LOGOUT
+----------------------------------------------------------- */
 export const logOut = async (req, res) => {
   try {
-    // Clear cookie with same cookie attributes used to set it
     res.clearCookie("token", {
       httpOnly: true,
       secure: true,
       sameSite: "none",
       path: "/",
     });
-    return res.status(200).json({ message: "Logged out successfully" });
+
+    res.status(200).json({ message: "Logged out" });
   } catch (error) {
-    console.error("Logout error:", error);
-    return res.status(500).json({ message: `Logout error: ${error.message || error}` });
+    logger.error("Logout error", error.message);
+    res.status(500).json({ message: "Logout failed" });
   }
 };
 
-// 2FA Setup - Generate secret and QR code
+/* -----------------------------------------------------------
+   2FA SETUP (generate secret + QR + backup codes)
+----------------------------------------------------------- */
 export const setup2FA = async (req, res) => {
   try {
-    const userId = req.userId;
-    const user = await User.findById(userId);
+    const user = await User.findById(req.userId);
 
-    if (!user) {
+    if (!user)
       return res.status(404).json({ message: "User not found" });
-    }
 
-    if (user.twoFactorEnabled) {
-      return res.status(400).json({ message: "2FA is already enabled" });
-    }
+    if (user.twoFactorEnabled)
+      return res.status(400).json({ message: "2FA already enabled" });
 
-    // Generate secret
     const secret = speakeasy.generateSecret({
       name: `SYRA (${user.email})`,
-      issuer: 'SYRA AI'
+      issuer: "SYRA AI"
     });
 
-    // Generate QR code
-    const qrCodeUrl = await qrcode.toDataURL(secret.otpauth_url);
+    const qrCode = await qrcode.toDataURL(secret.otpauth_url);
 
-    // Generate backup codes
-    const backupCodes = [];
+    // Create 10 backup codes
+    const backupCodesPlain = [];
+    const backupCodesHashed = [];
+
     for (let i = 0; i < 10; i++) {
-      backupCodes.push(crypto.randomBytes(4).toString('hex').toUpperCase());
+      const code = crypto.randomBytes(4).toString("hex").toUpperCase();
+      backupCodesPlain.push(code);
+      backupCodesHashed.push(await bcrypt.hash(code, 10));
     }
 
-    // Save secret temporarily (will be confirmed later)
+    // Store secret & codes temporarily
     user.twoFactorSecret = secret.base32;
-    user.backupCodes = backupCodes.map(code => bcrypt.hashSync(code, 10));
+    user.backupCodes = backupCodesHashed;
     await user.save();
 
-    logger.info('2FA setup initiated', { userId: user._id, email: user.email });
+    logger.info("2FA setup initialized", user._id);
 
     res.json({
       secret: secret.base32,
-      qrCode: qrCodeUrl,
-      backupCodes: backupCodes // Show to user once, then they should save them
+      qrCode,
+      backupCodes: backupCodesPlain
     });
+
   } catch (error) {
-    logger.error('2FA setup error', { error: error.message, userId: req.userId });
+    logger.error("2FA setup error", error.message);
     res.status(500).json({ message: "Failed to setup 2FA" });
   }
 };
 
-// 2FA Verification and Enable
+/* -----------------------------------------------------------
+   VERIFY & ENABLE 2FA
+----------------------------------------------------------- */
 export const verify2FA = async (req, res) => {
   try {
-    const { token } = req.body;
-    const userId = req.userId;
+    const user = await User.findById(req.userId).select("+twoFactorSecret");
 
-    const user = await User.findById(userId).select('+twoFactorSecret');
-    if (!user || !user.twoFactorSecret) {
-      return res.status(400).json({ message: "2FA setup not initiated" });
-    }
+    if (!user || !user.twoFactorSecret)
+      return res.status(400).json({ message: "2FA setup not started" });
 
-    const verified = speakeasy.totp.verify({
+    const valid = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
-      encoding: 'base32',
-      token: token,
-      window: 2 // Allow 2 time steps (30 seconds) tolerance
-    });
-
-    if (!verified) {
-      return res.status(400).json({ message: "Invalid 2FA token" });
-    }
-
-    // Enable 2FA
-    user.twoFactorEnabled = true;
-    await user.save();
-
-    logger.info('2FA enabled successfully', { userId: user._id });
-
-    res.json({ message: "2FA enabled successfully" });
-  } catch (error) {
-    logger.error('2FA verification error', { error: error.message, userId: req.userId });
-    res.status(500).json({ message: "Failed to verify 2FA" });
-  }
-};
-
-// Disable 2FA
-export const disable2FA = async (req, res) => {
-  try {
-    const { token } = req.body;
-    const userId = req.userId;
-
-    const user = await User.findById(userId).select('+twoFactorSecret');
-    if (!user || !user.twoFactorEnabled) {
-      return res.status(400).json({ message: "2FA is not enabled" });
-    }
-
-    const verified = speakeasy.totp.verify({
-      secret: user.twoFactorSecret,
-      encoding: 'base32',
-      token: token,
+      encoding: "base32",
+      token: req.body.token,
       window: 2
     });
 
-    if (!verified) {
+    if (!valid)
       return res.status(400).json({ message: "Invalid 2FA token" });
-    }
 
-    // Disable 2FA
+    user.twoFactorEnabled = true;
+    await user.save();
+
+    res.json({ message: "2FA enabled" });
+
+  } catch (error) {
+    logger.error("2FA verification error", error.message);
+    res.status(500).json({ message: "Error verifying 2FA" });
+  }
+};
+
+/* -----------------------------------------------------------
+   DISABLE 2FA
+----------------------------------------------------------- */
+export const disable2FA = async (req, res) => {
+  try {
+    const user = await User.findById(req.userId).select("+twoFactorSecret");
+
+    if (!user.twoFactorEnabled)
+      return res.status(400).json({ message: "2FA not enabled" });
+
+    const valid = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: "base32",
+      token: req.body.token,
+      window: 2
+    });
+
+    if (!valid)
+      return res.status(400).json({ message: "Invalid 2FA token" });
+
     user.twoFactorEnabled = false;
     user.twoFactorSecret = undefined;
     user.backupCodes = [];
     await user.save();
 
-    logger.info('2FA disabled successfully', { userId: user._id });
+    res.json({ message: "2FA disabled" });
 
-    res.json({ message: "2FA disabled successfully" });
   } catch (error) {
-    logger.error('2FA disable error', { error: error.message, userId: req.userId });
+    logger.error("Disable 2FA error", error.message);
     res.status(500).json({ message: "Failed to disable 2FA" });
   }
 };
 
-// Verify 2FA during login
+/* -----------------------------------------------------------
+   VERIFY LOGIN 2FA (final login step)
+----------------------------------------------------------- */
 export const verifyLogin2FA = async (req, res) => {
   try {
     const { token, backupCode } = req.body;
-    const userId = req.userId;
 
-    const user = await User.findById(userId).select('+twoFactorSecret +backupCodes');
-    if (!user || !user.twoFactorEnabled) {
-      return res.status(400).json({ message: "2FA not required" });
-    }
+    const user = await User.findById(req.userId)
+      .select("+twoFactorSecret +backupCodes");
+
+    if (!user.twoFactorEnabled)
+      return res.status(400).json({ message: "2FA not enabled" });
 
     let verified = false;
 
-    // Check TOTP token
+    // 1️⃣ TOTP check
     if (token) {
       verified = speakeasy.totp.verify({
         secret: user.twoFactorSecret,
-        encoding: 'base32',
-        token: token,
+        encoding: "base32",
+        token,
         window: 2
       });
     }
 
-    // Check backup code if TOTP failed
+    // 2️⃣ Backup code check
     if (!verified && backupCode) {
-      const backupCodeIndex = user.backupCodes.findIndex(code =>
-        bcrypt.compareSync(backupCode, code)
+      const index = user.backupCodes.findIndex((c) =>
+        bcrypt.compareSync(backupCode, c)
       );
 
-      if (backupCodeIndex !== -1) {
+      if (index !== -1) {
         verified = true;
-        // Remove used backup code
-        user.backupCodes.splice(backupCodeIndex, 1);
+        user.backupCodes.splice(index, 1);
         await user.save();
       }
     }
 
-    if (!verified) {
-      return res.status(400).json({ message: "Invalid 2FA token or backup code" });
-    }
+    if (!verified)
+      return res.status(400).json({ message: "Invalid code" });
 
-    // Update last login
-    user.lastLoginAt = new Date();
-    user.loginAttempts = 0;
-    user.lockUntil = undefined;
-    await user.save();
-
+    // Issue login token finally
     const authToken = genToken(user._id);
 
     res.cookie("token", authToken, {
@@ -285,14 +310,16 @@ export const verifyLogin2FA = async (req, res) => {
       path: "/",
     });
 
-    logger.info('Login with 2FA successful', { userId: user._id });
+    user.lastLoginAt = new Date();
+    await user.save();
 
-    res.json({
+    return res.json({
       message: "Login successful",
       user: sanitizeUser(user)
     });
+
   } catch (error) {
-    logger.error('2FA login verification error', { error: error.message, userId: req.userId });
+    logger.error("2FA login verification error", error.message);
     res.status(500).json({ message: "Login verification failed" });
   }
 };

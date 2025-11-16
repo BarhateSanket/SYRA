@@ -1,204 +1,255 @@
-import { getAuthenticatedClient, initializeGoogleClients } from '../config/google.js';
+import { getAuthenticatedClient, initializeGoogleClients } from "../config/google.js";
 
-// Gmail Integration
+// Helper: Ensure tokens exist before calling Google APIs
+const requireGoogleTokens = (req, res) => {
+  if (!req.user || !req.user.googleTokens || !req.user.googleTokens.tokens) {
+    res.status(401).json({
+      success: false,
+      error: "Google account not connected"
+    });
+    return false;
+  }
+  return true;
+};
+
+/* -----------------------------------------------------
+   Gmail — Read Emails
+----------------------------------------------------- */
 export const readEmails = async (req, res) => {
-    try {
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const gmail = initializeGoogleClients(auth).gmail;
+  try {
+    if (!requireGoogleTokens(req, res)) return;
 
-        const response = await gmail.users.messages.list({
-            userId: 'me',
-            maxResults: 10,
-            q: 'is:inbox'
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { gmail } = initializeGoogleClients(auth);
+
+    const inbox = await gmail.users.messages.list({
+      userId: "me",
+      maxResults: 10,
+      q: "is:inbox",
+    });
+
+    if (!inbox.data.messages) {
+      return res.json({ success: true, emails: [] });
+    }
+
+    const emails = await Promise.all(
+      inbox.data.messages.map(async ({ id }) => {
+        const msg = await gmail.users.messages.get({
+          userId: "me",
+          id,
         });
 
-        const emails = await Promise.all(
-            response.data.messages.map(async (message) => {
-                const email = await gmail.users.messages.get({
-                    userId: 'me',
-                    id: message.id
-                });
-                return {
-                    id: email.data.id,
-                    subject: email.data.payload.headers.find(h => h.name === 'Subject')?.value,
-                    from: email.data.payload.headers.find(h => h.name === 'From')?.value,
-                    date: email.data.payload.headers.find(h => h.name === 'Date')?.value,
-                    snippet: email.data.snippet
-                };
-            })
-        );
+        const headers = msg.data.payload.headers;
 
-        res.json({ success: true, emails });
-    } catch (error) {
-        console.error('Gmail read error:', error);
-        res.status(500).json({ success: false, error: 'Failed to read emails' });
-    }
-};
-
-export const sendEmail = async (req, res) => {
-    try {
-        const { to, subject, body } = req.body;
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const gmail = initializeGoogleClients(auth).gmail;
-
-        const email = [
-            'Content-Type: text/plain; charset=utf-8\n',
-            'MIME-Version: 1.0\n',
-            'Content-Transfer-Encoding: 7bit\n',
-            `To: ${to}\n`,
-            `Subject: ${subject}\n\n`,
-            body
-        ].join('');
-
-        const encodedEmail = Buffer.from(email).toString('base64').replace(/\+/g, '-').replace(/\//g, '_');
-
-        await gmail.users.messages.send({
-            userId: 'me',
-            requestBody: {
-                raw: encodedEmail
-            }
-        });
-
-        res.json({ success: true, message: 'Email sent successfully' });
-    } catch (error) {
-        console.error('Gmail send error:', error);
-        res.status(500).json({ success: false, error: 'Failed to send email' });
-    }
-};
-
-// Google Calendar Integration
-export const getCalendarEvents = async (req, res) => {
-    try {
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const calendar = initializeGoogleClients(auth).calendar;
-
-        const response = await calendar.events.list({
-            calendarId: 'primary',
-            timeMin: new Date().toISOString(),
-            maxResults: 10,
-            singleEvents: true,
-            orderBy: 'startTime'
-        });
-
-        res.json({ success: true, events: response.data.items });
-    } catch (error) {
-        console.error('Calendar events error:', error);
-        res.status(500).json({ success: false, error: 'Failed to get calendar events' });
-    }
-};
-
-export const createCalendarEvent = async (req, res) => {
-    try {
-        const { summary, description, startTime, endTime } = req.body;
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const calendar = initializeGoogleClients(auth).calendar;
-
-        const event = {
-            summary,
-            description,
-            start: { dateTime: startTime },
-            end: { dateTime: endTime }
+        return {
+          id,
+          subject: headers.find((h) => h.name === "Subject")?.value || "",
+          from: headers.find((h) => h.name === "From")?.value || "",
+          date: headers.find((h) => h.name === "Date")?.value || "",
+          snippet: msg.data.snippet,
         };
+      })
+    );
 
-        const response = await calendar.events.insert({
-            calendarId: 'primary',
-            requestBody: event
-        });
-
-        res.json({ success: true, event: response.data });
-    } catch (error) {
-        console.error('Calendar create event error:', error);
-        res.status(500).json({ success: false, error: 'Failed to create calendar event' });
-    }
+    res.json({ success: true, emails });
+  } catch (error) {
+    console.error("Gmail read error:", error);
+    res.status(500).json({ success: false, error: "Failed to read emails" });
+  }
 };
 
-// Google Drive Integration
+/* -----------------------------------------------------
+   Gmail — Send Email
+----------------------------------------------------- */
+export const sendEmail = async (req, res) => {
+  try {
+    if (!requireGoogleTokens(req, res)) return;
+
+    const { to, subject, body } = req.body;
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { gmail } = initializeGoogleClients(auth);
+
+    const email = [
+      `To: ${to}`,
+      `Subject: ${subject}`,
+      "Content-Type: text/plain; charset=utf-8",
+      "MIME-Version: 1.0",
+      "",
+      body,
+    ].join("\n");
+
+    const encoded = Buffer.from(email)
+      .toString("base64")
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/, "");
+
+    await gmail.users.messages.send({
+      userId: "me",
+      requestBody: { raw: encoded },
+    });
+
+    res.json({ success: true, message: "Email sent successfully" });
+  } catch (error) {
+    console.error("Gmail send error:", error);
+    res.status(500).json({ success: false, error: "Failed to send email" });
+  }
+};
+
+/* -----------------------------------------------------
+   Google Calendar — List Events
+----------------------------------------------------- */
+export const getCalendarEvents = async (req, res) => {
+  try {
+    if (!requireGoogleTokens(req, res)) return;
+
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { calendar } = initializeGoogleClients(auth);
+
+    const events = await calendar.events.list({
+      calendarId: "primary",
+      timeMin: new Date().toISOString(),
+      singleEvents: true,
+      maxResults: 10,
+      orderBy: "startTime",
+    });
+
+    res.json({ success: true, events: events.data.items });
+  } catch (error) {
+    console.error("Calendar list error:", error);
+    res.status(500).json({ success: false, error: "Failed to get calendar events" });
+  }
+};
+
+/* -----------------------------------------------------
+   Google Calendar — Create Event
+----------------------------------------------------- */
+export const createCalendarEvent = async (req, res) => {
+  try {
+    if (!requireGoogleTokens(req, res)) return;
+
+    const { summary, description, startTime, endTime } = req.body;
+    const tokens = req.user.googleTokens.tokens;
+
+    const auth = getAuthenticatedClient(tokens);
+    const { calendar } = initializeGoogleClients(auth);
+
+    const event = {
+      summary,
+      description,
+      start: { dateTime: startTime },
+      end: { dateTime: endTime },
+    };
+
+    const result = await calendar.events.insert({
+      calendarId: "primary",
+      requestBody: event,
+    });
+
+    res.json({ success: true, event: result.data });
+  } catch (error) {
+    console.error("Calendar create error:", error);
+    res.status(500).json({ success: false, error: "Failed to create event" });
+  }
+};
+
+/* -----------------------------------------------------
+   Google Drive — List Files
+----------------------------------------------------- */
 export const listDriveFiles = async (req, res) => {
-    try {
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const drive = initializeGoogleClients(auth).drive;
+  try {
+    if (!requireGoogleTokens(req, res)) return;
 
-        const response = await drive.files.list({
-            pageSize: 10,
-            fields: 'files(id, name, mimeType, modifiedTime)'
-        });
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { drive } = initializeGoogleClients(auth);
 
-        res.json({ success: true, files: response.data.files });
-    } catch (error) {
-        console.error('Drive list files error:', error);
-        res.status(500).json({ success: false, error: 'Failed to list drive files' });
-    }
+    const files = await drive.files.list({
+      pageSize: 10,
+      fields: "files(id, name, mimeType, modifiedTime)",
+    });
+
+    res.json({ success: true, files: files.data.files });
+  } catch (error) {
+    console.error("Drive list error:", error);
+    res.status(500).json({ success: false, error: "Failed to list drive files" });
+  }
 };
 
-// Google Photos Integration
+/* -----------------------------------------------------
+   Google Photos — Search Photos
+----------------------------------------------------- */
 export const searchPhotos = async (req, res) => {
-    try {
-        const { query } = req.query;
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const photos = initializeGoogleClients(auth).photos;
+  try {
+    if (!requireGoogleTokens(req, res)) return;
 
-        const response = await photos.mediaItems.search({
-            requestBody: {
-                filters: {
-                    contentFilter: {
-                        includedContentCategories: ['PEOPLE']
-                    },
-                    mediaTypeFilter: {
-                        mediaTypes: ['PHOTO']
-                    }
-                },
-                pageSize: 10
-            }
-        });
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { photos } = initializeGoogleClients(auth);
 
-        res.json({ success: true, photos: response.data.mediaItems });
-    } catch (error) {
-        console.error('Photos search error:', error);
-        res.status(500).json({ success: false, error: 'Failed to search photos' });
-    }
+    const result = await photos.mediaItems.search({
+      requestBody: {
+        pageSize: 10,
+        filters: {
+          mediaTypeFilter: { mediaTypes: ["PHOTO"] },
+        },
+      },
+    });
+
+    res.json({ success: true, photos: result.data.mediaItems || [] });
+  } catch (error) {
+    console.error("Photos search error:", error);
+    res.status(500).json({ success: false, error: "Failed to search photos" });
+  }
 };
 
-// YouTube Integration
+/* -----------------------------------------------------
+   YouTube — List Playlists
+----------------------------------------------------- */
 export const getPlaylists = async (req, res) => {
-    try {
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const youtube = initializeGoogleClients(auth).youtube;
+  try {
+    if (!requireGoogleTokens(req, res)) return;
 
-        const response = await youtube.playlists.list({
-            part: 'snippet',
-            mine: true,
-            maxResults: 10
-        });
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { youtube } = initializeGoogleClients(auth);
 
-        res.json({ success: true, playlists: response.data.items });
-    } catch (error) {
-        console.error('YouTube playlists error:', error);
-        res.status(500).json({ success: false, error: 'Failed to get playlists' });
-    }
+    const playlists = await youtube.playlists.list({
+      part: "snippet",
+      mine: true,
+      maxResults: 10,
+    });
+
+    res.json({ success: true, playlists: playlists.data.items });
+  } catch (error) {
+    console.error("YouTube playlists error:", error);
+    res.status(500).json({ success: false, error: "Failed to fetch playlists" });
+  }
 };
 
+/* -----------------------------------------------------
+   YouTube — Subscriptions
+----------------------------------------------------- */
 export const getSubscriptions = async (req, res) => {
-    try {
-        const { tokens } = req.user.googleTokens;
-        const auth = getAuthenticatedClient(tokens);
-        const youtube = initializeGoogleClients(auth).youtube;
+  try {
+    if (!requireGoogleTokens(req, res)) return;
 
-        const response = await youtube.subscriptions.list({
-            part: 'snippet',
-            mine: true,
-            maxResults: 10
-        });
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { youtube } = initializeGoogleClients(auth);
 
-        res.json({ success: true, subscriptions: response.data.items });
-    } catch (error) {
-        console.error('YouTube subscriptions error:', error);
-        res.status(500).json({ success: false, error: 'Failed to get subscriptions' });
-    }
+    const subscriptions = await youtube.subscriptions.list({
+      part: "snippet",
+      mine: true,
+      maxResults: 10,
+    });
+
+    res.json({ success: true, subscriptions: subscriptions.data.items });
+  } catch (error) {
+    console.error("YouTube subscriptions error:", error);
+    res.status(500).json({ success: false, error: "Failed to get subscriptions" });
+  }
 };

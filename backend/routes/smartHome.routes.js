@@ -1,4 +1,4 @@
-import express from 'express';
+import express from "express";
 import {
   getDevices,
   addDevice,
@@ -6,20 +6,20 @@ import {
   getDeviceStatus,
   removeDevice,
   getSupportedDeviceTypes
-} from '../controllers/smartHome.controller.js';
-import isAuth from '../middlewares/isAuth.js';
+} from "../controllers/smartHome.controller.js";
+import isAuth from "../middlewares/isAuth.js";
 
 const router = express.Router();
 
-// All smart home routes require authentication
+// All routes require user authentication
 router.use(isAuth);
 
-// Smart home routes
-router.get('/devices', getDevices);
-router.post('/devices', addDevice);
-router.get('/devices/types', getSupportedDeviceTypes);
-router.get('/devices/:deviceId', getDeviceStatus);
-router.put('/devices/:deviceId/control', controlDevice);
-router.delete('/devices/:deviceId', removeDevice);
+// Smart Home Device Routes
+router.get("/devices", getDevices);                   // Get all devices
+router.post("/devices", addDevice);                  // Add a new device
+router.get("/devices/types", getSupportedDeviceTypes); // Get supported device types
+router.get("/devices/:deviceId", getDeviceStatus);     // Get status of a device
+router.put("/devices/:deviceId/control", controlDevice); // Control a specific device
+router.delete("/devices/:deviceId", removeDevice);      // Delete a device
 
 export default router;

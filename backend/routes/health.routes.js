@@ -9,12 +9,12 @@ const { enhancedAuth } = require('../middlewares/sessionManager.js');
 
 const healthRouter = express.Router();
 
-// Public health check endpoints
+// Public health endpoints
 healthRouter.get('/health', healthCheck);
 healthRouter.get('/ready', readinessCheck);
 healthRouter.get('/dependencies', checkDependencies);
 
-// Protected detailed metrics (requires authentication)
+// Protected metrics endpoint
 healthRouter.get('/metrics', enhancedAuth, getMetrics);
 
 module.exports = healthRouter;

@@ -1,7 +1,8 @@
-const Reminder = require('../models/reminder.model');
-const cron = require('node-cron');
-const { getGeminiResponse } = require('../gemini');
+const Reminder = require("../models/reminder.model");
+const cron = require("node-cron");
+const { getGeminiResponse } = require("../gemini");
 
+// ---------------- CREATE REMINDER ----------------
 const createReminder = async (req, res) => {
   try {
     const { title, description, type, scheduledTime, isRecurring, recurrencePattern } = req.body;
@@ -10,8 +11,8 @@ const createReminder = async (req, res) => {
     if (!title || !scheduledTime) {
       return res.status(400).json({
         success: false,
-        message: 'Title and scheduled time are required',
-        data: null
+        message: "Title and scheduled time are required",
+        data: null,
       });
     }
 
@@ -19,48 +20,43 @@ const createReminder = async (req, res) => {
       userId,
       title,
       description,
-      type: type || 'reminder',
+      type: type || "reminder",
       scheduledTime: new Date(scheduledTime),
       isRecurring: isRecurring || false,
-      recurrencePattern: isRecurring ? recurrencePattern : undefined
+      recurrencePattern: isRecurring ? recurrencePattern : undefined,
     });
 
     await reminder.save();
 
-    // Schedule the reminder if it's not recurring or if it's the first occurrence
-    if (!isRecurring) {
-      scheduleReminder(reminder);
-    } else {
-      scheduleRecurringReminder(reminder);
-    }
+    // Schedule
+    if (!isRecurring) scheduleReminder(reminder);
+    else scheduleRecurringReminder(reminder);
 
     res.status(201).json({
       success: true,
-      message: 'Reminder created successfully',
-      data: reminder
+      message: "Reminder created successfully",
+      data: reminder,
     });
-
   } catch (error) {
-    console.error('Create reminder error:', error.message);
+    console.error("Create reminder error:", error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to create reminder',
-      data: null
+      message: "Failed to create reminder",
+      data: null,
     });
   }
 };
 
+// ---------------- GET REMINDERS ----------------
 const getReminders = async (req, res) => {
   try {
     const userId = req.user.id;
     const { type, isActive = true, limit = 50 } = req.query;
 
-    const query = { userId, isActive: isActive === 'true' };
+    const query = { userId, isActive: isActive === "true" };
 
-    if (type) {
-      query.type = type;
-    }
+    if (type) query.type = type;
 
     const reminders = await Reminder.find(query)
       .sort({ scheduledTime: 1 })
@@ -68,21 +64,21 @@ const getReminders = async (req, res) => {
 
     res.json({
       success: true,
-      message: 'Reminders retrieved successfully',
-      data: reminders
+      message: "Reminders retrieved successfully",
+      data: reminders,
     });
-
   } catch (error) {
-    console.error('Get reminders error:', error.message);
+    console.error("Get reminders error:", error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve reminders',
-      data: null
+      message: "Failed to retrieve reminders",
+      data: null,
     });
   }
 };
 
+// ---------------- UPDATE REMINDER ----------------
 const updateReminder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -98,28 +94,28 @@ const updateReminder = async (req, res) => {
     if (!reminder) {
       return res.status(404).json({
         success: false,
-        message: 'Reminder not found',
-        data: null
+        message: "Reminder not found",
+        data: null,
       });
     }
 
     res.json({
       success: true,
-      message: 'Reminder updated successfully',
-      data: reminder
+      message: "Reminder updated successfully",
+      data: reminder,
     });
-
   } catch (error) {
-    console.error('Update reminder error:', error.message);
+    console.error("Update reminder error:", error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to update reminder',
-      data: null
+      message: "Failed to update reminder",
+      data: null,
     });
   }
 };
 
+// ---------------- DELETE REMINDER ----------------
 const deleteReminder = async (req, res) => {
   try {
     const { id } = req.params;
@@ -130,28 +126,28 @@ const deleteReminder = async (req, res) => {
     if (!reminder) {
       return res.status(404).json({
         success: false,
-        message: 'Reminder not found',
-        data: null
+        message: "Reminder not found",
+        data: null,
       });
     }
 
     res.json({
       success: true,
-      message: 'Reminder deleted successfully',
-      data: reminder
+      message: "Reminder deleted successfully",
+      data: reminder,
     });
-
   } catch (error) {
-    console.error('Delete reminder error:', error.message);
+    console.error("Delete reminder error:", error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to delete reminder',
-      data: null
+      message: "Failed to delete reminder",
+      data: null,
     });
   }
 };
 
+// ---------------- MARK COMPLETED ----------------
 const markCompleted = async (req, res) => {
   try {
     const { id } = req.params;
@@ -166,137 +162,123 @@ const markCompleted = async (req, res) => {
     if (!reminder) {
       return res.status(404).json({
         success: false,
-        message: 'Reminder not found',
-        data: null
+        message: "Reminder not found",
+        data: null,
       });
     }
 
     res.json({
       success: true,
-      message: 'Reminder marked as completed',
-      data: reminder
+      message: "Reminder marked as completed",
+      data: reminder,
     });
-
   } catch (error) {
-    console.error('Mark completed error:', error.message);
+    console.error("Mark completed error:", error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to mark reminder as completed',
-      data: null
+      message: "Failed to mark reminder as completed",
+      data: null,
     });
   }
 };
 
-// Helper function to schedule a one-time reminder
+// ======================================================
+// ---------------- SCHEDULING HELPERS ------------------
+// ======================================================
+
+// ONE-TIME REMINDER
 function scheduleReminder(reminder) {
   const now = new Date();
-  const scheduledTime = new Date(reminder.scheduledTime);
+  const scheduled = new Date(reminder.scheduledTime);
 
-  if (scheduledTime <= now) {
-    // If the time has already passed, trigger immediately
-    triggerReminder(reminder);
-    return;
-  }
+  if (scheduled <= now) return triggerReminder(reminder);
 
-  const delay = scheduledTime.getTime() - now.getTime();
+  const delay = scheduled - now;
 
   setTimeout(() => {
     triggerReminder(reminder);
   }, delay);
 }
 
-// Helper function to schedule recurring reminders
+// RECURRING REMINDER
 function scheduleRecurringReminder(reminder) {
-  const cronExpression = getCronExpression(reminder.recurrencePattern, reminder.scheduledTime);
-
-  if (!cronExpression) {
-    console.error('Invalid recurrence pattern for reminder:', reminder._id);
+  const cronExp = getCronExpression(reminder.recurrencePattern, reminder.scheduledTime);
+  if (!cronExp) {
+    console.error("Invalid recurrence pattern:", reminder._id);
     return;
   }
 
-  cron.schedule(cronExpression, () => {
-    triggerReminder(reminder);
-  });
+  cron.schedule(cronExp, () => triggerReminder(reminder));
 }
 
-// Helper function to get cron expression for recurring reminders
-function getCronExpression(pattern, scheduledTime) {
-  const minute = scheduledTime.getMinutes();
-  const hour = scheduledTime.getHours();
-  const day = scheduledTime.getDate();
-  const month = scheduledTime.getMonth() + 1;
-  const dayOfWeek = scheduledTime.getDay();
+// CRON PATTERN BUILDER
+function getCronExpression(pattern, date) {
+  const min = date.getMinutes();
+  const hour = date.getHours();
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const dow = date.getDay();
 
   switch (pattern) {
-    case 'daily':
-      return `${minute} ${hour} * * *`;
-    case 'weekly':
-      return `${minute} ${hour} * * ${dayOfWeek}`;
-    case 'monthly':
-      return `${minute} ${hour} ${day} * *`;
-    case 'yearly':
-      return `${minute} ${hour} ${day} ${month} *`;
+    case "daily":
+      return `${min} ${hour} * * *`;
+    case "weekly":
+      return `${min} ${hour} * * ${dow}`;
+    case "monthly":
+      return `${min} ${hour} ${day} * *`;
+    case "yearly":
+      return `${min} ${hour} ${day} ${month} *`;
     default:
       return null;
   }
 }
 
-// Helper function to trigger a reminder
+// ---------------- TRIGGER REMINDER ----------------
 async function triggerReminder(reminder) {
   try {
-    // Here you would integrate with your notification system
-    // For now, we'll use Gemini to generate a reminder message
-    const prompt = `Generate a friendly reminder message for: "${reminder.title}"${reminder.description ? ` - ${reminder.description}` : ''}`;
+    const prompt = `Generate a friendly reminder message for: "${reminder.title}"${reminder.description ? ` - ${reminder.description}` : ""}`;
 
-    const geminiResponse = await getGeminiResponse(prompt);
+    const ai = await getGeminiResponse(prompt);
 
-    // In a real implementation, you would send this to the user's device
-    // For now, we'll log it and potentially store it
-    console.log(`Reminder triggered for user ${reminder.userId}: ${geminiResponse.response}`);
+    console.log(`Reminder triggered for user ${reminder.userId}: ${ai.response}`);
 
-    // If it's not recurring, mark as completed
     if (!reminder.isRecurring) {
       await Reminder.findByIdAndUpdate(reminder._id, {
         isCompleted: true,
-        isActive: false
+        isActive: false,
       });
     }
-
   } catch (error) {
-    console.error('Error triggering reminder:', error);
+    console.error("Error triggering reminder:", error);
   }
 }
 
-// Initialize existing reminders on server start
+// ---------------- INITIALIZATION ----------------
 const initializeReminders = async () => {
   try {
-    const activeReminders = await Reminder.find({ isActive: true });
+    const active = await Reminder.find({ isActive: true });
 
-    activeReminders.forEach(reminder => {
-      if (!reminder.isRecurring) {
-        const now = new Date();
-        const scheduledTime = new Date(reminder.scheduledTime);
-
-        if (scheduledTime > now) {
-          scheduleReminder(reminder);
-        }
+    active.forEach((rem) => {
+      if (!rem.isRecurring) {
+        if (new Date(rem.scheduledTime) > new Date()) scheduleReminder(rem);
       } else {
-        scheduleRecurringReminder(reminder);
+        scheduleRecurringReminder(rem);
       }
     });
 
-    console.log(`Initialized ${activeReminders.length} active reminders`);
+    console.log(`Initialized ${active.length} active reminders`);
   } catch (error) {
-    console.error('Error initializing reminders:', error);
+    console.error("Error initializing reminders:", error);
   }
 };
 
+// EXPORT
 module.exports = {
   createReminder,
   getReminders,
   updateReminder,
   deleteReminder,
   markCompleted,
-  initializeReminders
+  initializeReminders,
 };

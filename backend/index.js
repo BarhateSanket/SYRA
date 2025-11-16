@@ -1,21 +1,19 @@
 import express from "express";
 import dotenv from "dotenv";
 dotenv.config();
+
 import connectDb from "./config/db.js";
-import authRouter from "./routes/auth.routes.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+
+// Routers
+import authRouter from "./routes/auth.routes.js";
 import userRouter from "./routes/user.routes.js";
 import googleRouter from "./routes/google.routes.js";
 import githubRouter from "./routes/github.routes.js";
 import weatherRouter from "./routes/weather.routes.js";
 import newsRouter from "./routes/news.routes.js";
 import stocksRouter from "./routes/stocks.routes.js";
-
-// FIX: Convert CommonJS route imports
-const unitConversionRouter = require("./routes/unitConversion.routes.js");
-const currencyRouter = require("./routes/currency.routes.js");
-
 import remindersRouter from "./routes/reminders.routes.js";
 import smartHomeRouter from "./routes/smartHome.routes.js";
 import healthRouter from "./routes/health.routes.js";
@@ -23,25 +21,31 @@ import monitoringRouter from "./routes/monitoring.routes.js";
 import analyticsRouter from "./routes/analytics.routes.js";
 import metricsRouter from "./routes/metrics.routes.js";
 
-import geminiResponse from "./gemini.js";
+// FIXED: ES Module imports (these are ES exports)
+import currencyRouter from "./routes/currency.routes.js";
+import unitConversionRouter from "./routes/unitConversion.routes.js";
+
+// Initializers
 import { initializeReminders } from "./controllers/reminders.controller.js";
 import { initializeDemoDevices } from "./controllers/smartHome.controller.js";
 
-// Swagger docs
+// Swagger Docs
 import { swaggerUi, specs } from "./config/swagger.js";
 
-// Security Middleware
+// Security & Monitoring Middleware
 import rateLimiter from "./middlewares/rateLimiter.js";
 import securityHeaders from "./middlewares/securityHeaders.js";
 import apiLogger from "./middlewares/apiLogger.js";
 import errorHandler from "./middlewares/errorHandler.js";
-
-// Monitoring & Metrics
 import { metricsMiddleware } from "./controllers/metrics.controller.js";
+
+// Performance
 import responseTime from "response-time";
 
-// Caching / Redis
+// Redis (connected automatically)
 import redisClient from "./config/redis.js";
+
+// Optional caching (not applied automatically)
 import { cacheMiddleware } from "./middlewares/cache.js";
 
 // Sentry
@@ -62,7 +66,7 @@ Sentry.init({
 const app = express();
 app.set("trust proxy", 1);
 
-// Security middleware
+// Security + Logging
 app.use(securityHeaders);
 app.use(apiLogger);
 app.use(rateLimiter);
@@ -80,18 +84,20 @@ app.use(
   })
 );
 
-const port = process.env.PORT || 5000;
-
+// Body parsers
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(responseTime());
+
+// Prometheus
 app.use(metricsMiddleware);
 
-// ROUTES
+// API ROUTES
 app.use("/api/auth", authRouter);
 app.use("/api/user", userRouter);
 app.use("/api/google", googleRouter);
 app.use("/api/github", githubRouter);
+
 app.use("/api/weather", weatherRouter);
 app.use("/api/news", newsRouter);
 app.use("/api/stocks", stocksRouter);
@@ -106,18 +112,21 @@ app.use("/api/health", healthRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/analytics", analyticsRouter);
 
-// Metrics
+// Prometheus Metrics endpoint
 app.use(metricsRouter);
 
-// Swagger
+// Swagger Docs
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 
-// Global error handler
+// Global Error Handler
 app.use(errorHandler);
+
+// Server Start
+const port = process.env.PORT || 5000;
 
 app.listen(port, () => {
   connectDb();
   initializeReminders();
   initializeDemoDevices();
-  console.log("Server started with security enhancements");
+  console.log(`Server running on port ${port} with full monitoring + security`);
 });
