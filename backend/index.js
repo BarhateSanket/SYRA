@@ -21,7 +21,7 @@ import monitoringRouter from "./routes/monitoring.routes.js";
 import analyticsRouter from "./routes/analytics.routes.js";
 import metricsRouter from "./routes/metrics.routes.js";
 
-// FIXED: ES Module imports (these are ES exports)
+// ESM Routers
 import currencyRouter from "./routes/currency.routes.js";
 import unitConversionRouter from "./routes/unitConversion.routes.js";
 
@@ -42,26 +42,29 @@ import { metricsMiddleware } from "./controllers/metrics.controller.js";
 // Performance
 import responseTime from "response-time";
 
-// Redis (connected automatically)
+// Redis
 import redisClient from "./config/redis.js";
 
-// Optional caching (not applied automatically)
+// Optional Caching
 import { cacheMiddleware } from "./middlewares/cache.js";
 
-// Sentry
+// =============================
+// FIXED SENTRY BLOCK
+// =============================
 import * as Sentry from "@sentry/node";
 import { nodeProfilingIntegration } from "@sentry/profiling-node";
 
 Sentry.init({
   dsn: process.env.SENTRY_DSN,
   integrations: [
-    new Sentry.Integrations.Http({ tracing: true }),
-    new Sentry.Integrations.Console(),
+    Sentry.httpIntegration(),
+    Sentry.consoleIntegration(),
     nodeProfilingIntegration(),
   ],
   tracesSampleRate: 1.0,
   profilesSampleRate: 1.0,
 });
+// =============================
 
 const app = express();
 app.set("trust proxy", 1);
@@ -74,10 +77,7 @@ app.use(rateLimiter);
 // CORS
 app.use(
   cors({
-    origin: [
-      "http://localhost:5173",
-      "https://syra-voice.vercel.app"
-    ],
+    origin: ["http://localhost:5173", "https://syra-voice.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -130,3 +130,4 @@ app.listen(port, () => {
   initializeDemoDevices();
   console.log(`Server running on port ${port} with full monitoring + security`);
 });
+export default app;
