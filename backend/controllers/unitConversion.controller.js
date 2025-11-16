@@ -1,3 +1,9 @@
+// ==============================
+// Unit Conversion Controller
+// CommonJS Compatible
+// ==============================
+
+// MAIN CONTROLLER FUNCTION
 const convertUnits = (req, res) => {
   try {
     const { from, to, value, category } = req.query;
@@ -5,7 +11,7 @@ const convertUnits = (req, res) => {
     if (!from || !to || !value || !category) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required parameters: from, to, value, category',
+        message: "Missing required parameters: from, to, value, category",
         data: null
       });
     }
@@ -14,58 +20,58 @@ const convertUnits = (req, res) => {
     if (isNaN(numValue)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid value parameter',
+        message: "Invalid value parameter",
         data: null
       });
     }
 
     let result;
-    let explanation = '';
+    let explanation = "";
 
     switch (category.toLowerCase()) {
-      case 'length':
-      case 'distance':
+      case "length":
+      case "distance":
         result = convertLength(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'weight':
-      case 'mass':
+      case "weight":
+      case "mass":
         result = convertWeight(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'temperature':
+      case "temperature":
         result = convertTemperature(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue}° ${from} = ${result}° ${to}`;
         break;
 
-      case 'volume':
+      case "volume":
         result = convertVolume(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'area':
+      case "area":
         result = convertArea(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'speed':
+      case "speed":
         result = convertSpeed(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'time':
+      case "time":
         result = convertTime(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'pressure':
+      case "pressure":
         result = convertPressure(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
 
-      case 'energy':
+      case "energy":
         result = convertEnergy(from.toLowerCase(), to.toLowerCase(), numValue);
         explanation = `${numValue} ${from} = ${result} ${to}`;
         break;
@@ -73,7 +79,7 @@ const convertUnits = (req, res) => {
       default:
         return res.status(400).json({
           success: false,
-          message: 'Unsupported conversion category',
+          message: "Unsupported conversion category",
           data: null
         });
     }
@@ -81,58 +87,68 @@ const convertUnits = (req, res) => {
     if (result === null) {
       return res.status(400).json({
         success: false,
-        message: 'Unsupported unit conversion',
+        message: "Unsupported unit conversion",
         data: null
       });
     }
 
     res.json({
       success: true,
-      message: 'Unit conversion successful',
+      message: "Unit conversion successful",
       data: {
         from: from.toLowerCase(),
         to: to.toLowerCase(),
         value: numValue,
-        result: Math.round(result * 1000000) / 1000000, // Round to 6 decimal places
+        result: Math.round(result * 1000000) / 1000000,
         category: category.toLowerCase(),
         explanation
       }
     });
 
   } catch (error) {
-    console.error('Unit conversion error:', error.message);
+    console.error("Unit conversion error:", error.message);
 
     res.status(500).json({
       success: false,
-      message: 'Failed to perform unit conversion',
+      message: "Failed to perform unit conversion",
       data: null
     });
   }
 };
 
+
+// ==============================
+// Supported Conversions List
+// ==============================
+
 const getSupportedConversions = (req, res) => {
   const conversions = {
-    length: ['meter', 'kilometer', 'centimeter', 'millimeter', 'mile', 'yard', 'foot', 'inch'],
-    weight: ['kilogram', 'gram', 'milligram', 'pound', 'ounce', 'ton'],
-    temperature: ['celsius', 'fahrenheit', 'kelvin'],
-    volume: ['liter', 'milliliter', 'cubic_meter', 'cubic_centimeter', 'gallon', 'quart', 'pint', 'cup', 'fluid_ounce'],
-    area: ['square_meter', 'square_kilometer', 'square_centimeter', 'square_millimeter', 'square_mile', 'square_yard', 'square_foot', 'square_inch', 'acre', 'hectare'],
-    speed: ['meter_per_second', 'kilometer_per_hour', 'mile_per_hour', 'knot', 'foot_per_second'],
-    time: ['second', 'minute', 'hour', 'day', 'week', 'month', 'year'],
-    pressure: ['pascal', 'kilopascal', 'bar', 'atmosphere', 'torr', 'mmhg', 'psi'],
-    energy: ['joule', 'kilojoule', 'calorie', 'kilocalorie', 'watt_hour', 'kilowatt_hour', 'btu']
+    length: ["meter", "kilometer", "centimeter", "millimeter", "mile", "yard", "foot", "inch"],
+    weight: ["kilogram", "gram", "milligram", "pound", "ounce", "ton"],
+    temperature: ["celsius", "fahrenheit", "kelvin"],
+    volume: ["liter", "milliliter", "cubic_meter", "cubic_centimeter", "gallon", "quart", "pint", "cup", "fluid_ounce"],
+    area: ["square_meter", "square_kilometer", "square_centimeter", "square_millimeter", "square_mile", "square_yard", "square_foot", "square_inch", "acre", "hectare"],
+    speed: ["meter_per_second", "kilometer_per_hour", "mile_per_hour", "knot", "foot_per_second"],
+    time: ["second", "minute", "hour", "day", "week", "month", "year"],
+    pressure: ["pascal", "kilopascal", "bar", "atmosphere", "torr", "mmhg", "psi"],
+    energy: ["joule", "kilojoule", "calorie", "kilocalorie", "watt_hour", "kilowatt_hour", "btu"]
   };
 
   res.json({
     success: true,
-    message: 'Supported conversions retrieved',
+    message: "Supported conversions retrieved",
     data: conversions
   });
 };
 
-// Length conversions (base unit: meter)
+
+// ==============================
+// CONVERSION FUNCTIONS
+// ==============================
+
+// LENGTH (meters)
 function convertLength(from, to, value) {
-  const toMeter = {
+  const table = {
     meter: 1,
     kilometer: 1000,
     centimeter: 0.01,
@@ -143,15 +159,13 @@ function convertLength(from, to, value) {
     inch: 0.0254
   };
 
-  if (!toMeter[from] || !toMeter[to]) return null;
-
-  const meters = value * toMeter[from];
-  return meters / toMeter[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Weight conversions (base unit: kilogram)
+// WEIGHT (kilograms)
 function convertWeight(from, to, value) {
-  const toKilogram = {
+  const table = {
     kilogram: 1,
     gram: 0.001,
     milligram: 0.000001,
@@ -160,47 +174,39 @@ function convertWeight(from, to, value) {
     ton: 1000
   };
 
-  if (!toKilogram[from] || !toKilogram[to]) return null;
-
-  const kilograms = value * toKilogram[from];
-  return kilograms / toKilogram[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Temperature conversions
+// TEMPERATURE
 function convertTemperature(from, to, value) {
   let celsius;
 
-  // Convert to Celsius first
   switch (from) {
-    case 'celsius':
+    case "celsius":
       celsius = value;
       break;
-    case 'fahrenheit':
-      celsius = (value - 32) * 5/9;
+    case "fahrenheit":
+      celsius = (value - 32) * 5 / 9;
       break;
-    case 'kelvin':
+    case "kelvin":
       celsius = value - 273.15;
       break;
     default:
       return null;
   }
 
-  // Convert from Celsius to target unit
   switch (to) {
-    case 'celsius':
-      return celsius;
-    case 'fahrenheit':
-      return (celsius * 9/5) + 32;
-    case 'kelvin':
-      return celsius + 273.15;
-    default:
-      return null;
+    case "celsius": return celsius;
+    case "fahrenheit": return (celsius * 9/5) + 32;
+    case "kelvin": return celsius + 273.15;
+    default: return null;
   }
 }
 
-// Volume conversions (base unit: liter)
+// VOLUME (liters)
 function convertVolume(from, to, value) {
-  const toLiter = {
+  const table = {
     liter: 1,
     milliliter: 0.001,
     cubic_meter: 1000,
@@ -212,15 +218,13 @@ function convertVolume(from, to, value) {
     fluid_ounce: 0.0295735
   };
 
-  if (!toLiter[from] || !toLiter[to]) return null;
-
-  const liters = value * toLiter[from];
-  return liters / toLiter[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Area conversions (base unit: square meter)
+// AREA (square meters)
 function convertArea(from, to, value) {
-  const toSquareMeter = {
+  const table = {
     square_meter: 1,
     square_kilometer: 1000000,
     square_centimeter: 0.0001,
@@ -233,15 +237,13 @@ function convertArea(from, to, value) {
     hectare: 10000
   };
 
-  if (!toSquareMeter[from] || !toSquareMeter[to]) return null;
-
-  const squareMeters = value * toSquareMeter[from];
-  return squareMeters / toSquareMeter[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Speed conversions (base unit: meter per second)
+// SPEED (m/s)
 function convertSpeed(from, to, value) {
-  const toMeterPerSecond = {
+  const table = {
     meter_per_second: 1,
     kilometer_per_hour: 0.277778,
     mile_per_hour: 0.44704,
@@ -249,33 +251,29 @@ function convertSpeed(from, to, value) {
     foot_per_second: 0.3048
   };
 
-  if (!toMeterPerSecond[from] || !toMeterPerSecond[to]) return null;
-
-  const metersPerSecond = value * toMeterPerSecond[from];
-  return metersPerSecond / toMeterPerSecond[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Time conversions (base unit: second)
+// TIME (seconds)
 function convertTime(from, to, value) {
-  const toSecond = {
+  const table = {
     second: 1,
     minute: 60,
     hour: 3600,
     day: 86400,
     week: 604800,
-    month: 2629746, // Average month (365.25 days / 12)
-    year: 31556952 // Average year
+    month: 2629746,
+    year: 31556952
   };
 
-  if (!toSecond[from] || !toSecond[to]) return null;
-
-  const seconds = value * toSecond[from];
-  return seconds / toSecond[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Pressure conversions (base unit: pascal)
+// PRESSURE (pascals)
 function convertPressure(from, to, value) {
-  const toPascal = {
+  const table = {
     pascal: 1,
     kilopascal: 1000,
     bar: 100000,
@@ -285,15 +283,13 @@ function convertPressure(from, to, value) {
     psi: 6894.76
   };
 
-  if (!toPascal[from] || !toPascal[to]) return null;
-
-  const pascals = value * toPascal[from];
-  return pascals / toPascal[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
-// Energy conversions (base unit: joule)
+// ENERGY (joules)
 function convertEnergy(from, to, value) {
-  const toJoule = {
+  const table = {
     joule: 1,
     kilojoule: 1000,
     calorie: 4.184,
@@ -303,12 +299,12 @@ function convertEnergy(from, to, value) {
     btu: 1055.06
   };
 
-  if (!toJoule[from] || !toJoule[to]) return null;
-
-  const joules = value * toJoule[from];
-  return joules / toJoule[to];
+  if (!table[from] || !table[to]) return null;
+  return (value * table[from]) / table[to];
 }
 
+
+// EXPORT CONTROLLER
 module.exports = {
   convertUnits,
   getSupportedConversions
