@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import Header from '../components/Header'
-import { userDataContext } from '../ContextApi/UserContext'
+import { UserDataContext } from '../ContextApi/UserContext'
 
 // Mock the context
 const mockSetUserData = vi.fn()
@@ -17,7 +17,7 @@ vi.mock('react-router-dom', async () => {
 })
 
 vi.mock('../ContextApi/UserContext', () => ({
-  userDataContext: {
+  UserDataContext: {
     Provider: ({ children }) => children,
   },
 }))
@@ -30,9 +30,9 @@ const mockUserData = {
 const renderHeader = (userData = null) => {
   return render(
     <BrowserRouter>
-      <userDataContext.Provider value={{ userData, setUserData: mockSetUserData }}>
+      <UserDataContext.Provider value={{ userData, setUserData: mockSetUserData }}>
         <Header />
-      </userDataContext.Provider>
+      </UserDataContext.Provider>
     </BrowserRouter>
   )
 }

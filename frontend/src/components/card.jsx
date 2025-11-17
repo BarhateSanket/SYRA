@@ -1,5 +1,5 @@
 import React, { useContext } from 'react'
-import { userDataContext } from '../ContextApi/UserContext'
+import { UserDataContext } from '../ContextApi/UserContext'
 
 function Card({image}) {
       const {serverUrl,userData,setUserData,backendImage,setBackendImage,frontendImage,setFrontendImage,selectedImage,setSelectedImage}=useContext(UserDataContext)

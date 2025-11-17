@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { userDataContext } from '../ContextApi/UserContext'
+import { UserDataContext } from '../ContextApi/UserContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import aiImg from "../assets/ai.gif"
@@ -16,7 +16,7 @@ import commandCache from '../components/CommandCache'
 import useWakeWord from '../hooks/useWakeWord'
 import useTouchGestures from '../hooks/useTouchGestures'
 function Home() {
-  const {userData,serverUrl,setUserData,getGeminiResponse}=useContext(userDataContext)
+  const {userData,serverUrl,setUserData,getGeminiResponse}=useContext(UserDataContext)
   const navigate=useNavigate()
   const [listening,setListening]=useState(false)
    const [userText,setUserText]=useState("")

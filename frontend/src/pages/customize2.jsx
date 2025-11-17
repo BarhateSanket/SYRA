@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect } from 'react'
-import { userDataContext } from '../ContextApi/UserContext'
+import { UserDataContext } from '../ContextApi/UserContext'
 import axios from 'axios'
 import { MdKeyboardBackspace } from "react-icons/md";
 import { FaPlay, FaCheck, FaArrowRight, FaArrowLeft } from "react-icons/fa";
@@ -13,7 +13,7 @@ function Customize2() {
         selectedImage,
         serverUrl,
         setUserData
-    } = useContext(userDataContext)
+    } = useContext(UserDataContext)
 
     const [assistantName, setAssistantName] = useState(userData?.assistantName || "")
     const [loading, setLoading] = useState(false)

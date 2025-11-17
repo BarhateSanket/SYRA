@@ -7,7 +7,7 @@ import Toast from '../components/Toast';
 
 function AddPaymentMethod() {
   const navigate = useNavigate();
-  const { userData } = useContext(userDataContext);
+  const { userData } = useContext(UserDataContext);
   const [selectedPlan, setSelectedPlan] = useState('monthly');
   const [isProcessing, setIsProcessing] = useState(false);
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
