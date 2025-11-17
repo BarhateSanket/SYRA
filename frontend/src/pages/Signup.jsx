@@ -4,7 +4,7 @@ import { IoEye } from "react-icons/io5";
 import { IoEyeOff } from "react-icons/io5";
 import { FaRocket, FaBrain, FaShieldAlt, FaStar } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
-import { userDataContext } from '../ContextApi/UserContext';
+import { userDataContext } from '../ContextApi/UserDataContext';
 import axios from "axios"
 import Header from '../components/Header'
 function SignUp() {

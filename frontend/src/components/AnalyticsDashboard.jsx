@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { RefreshCw, TrendingUp, Users, DollarSign, Activity } from 'lucide-react';
-import { useUser } from '../ContextApi/UserContext';
+import { useUser } from '../ContextApi/UserDataContext';
 
 const AnalyticsDashboard = () => {
   const { user } = useUser();

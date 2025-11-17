@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { FaCreditCard, FaMobileAlt, FaPaypal, FaUniversity, FaGooglePay, FaApplePay, FaSpinner } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { userDataContext } from '../ContextApi/UserContext';
+import { userDataContext } from '../ContextApi/UserDataContext';
 import Toast from '../components/Toast';
 
 function AddPaymentMethod() {

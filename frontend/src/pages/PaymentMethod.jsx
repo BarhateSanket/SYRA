@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import { FaCreditCard, FaPlus, FaTrash, FaEdit, FaCalendarAlt, FaRupeeSign, FaSpinner, FaCheckCircle, FaTimesCircle, FaPauseCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { userDataContext } from '../ContextApi/UserContext';
+import { userDataContext } from '../ContextApi/UserDataContext';
 import Toast from '../components/Toast';
 
 function PaymentMethod() {

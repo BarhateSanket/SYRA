@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useRef, useState } from 'react'
-import { userDataContext } from '../ContextApi/UserContext'
+import { userDataContext } from '../ContextApi/UserDataContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import aiImg from "../assets/ai.gif"
