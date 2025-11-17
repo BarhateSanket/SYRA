@@ -6,7 +6,7 @@ import ThemeToggle from './ThemeToggle';
 
 function Header() {
   const navigate = useNavigate();
-  const { userData, setUserData } = useContext(userDataContext);
+  const { userData, setUserData } = useContext(UserDataContext);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
