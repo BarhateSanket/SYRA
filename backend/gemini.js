@@ -1,6 +1,5 @@
 import axios from "axios";
 
-// Convert your existing function into a named export (REQUIRED)
 export const getGeminiResponse = async (
   command,
   assistantName,
@@ -8,7 +7,13 @@ export const getGeminiResponse = async (
   options = {}
 ) => {
   try {
-    const apiUrl = process.env.GEMINI_API_URL;
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      console.error("❌ Missing GEMINI_API_KEY");
+      return null;
+    }
+
     const {
       isPremium = false,
       isAdvancedAI = false,
@@ -16,97 +21,80 @@ export const getGeminiResponse = async (
       userLanguage = "en",
     } = options;
 
-    let prompt = `You are a virtual assistant named ${assistantName} created by ${userName}.
-You are not Google. You will now behave like a voice-enabled assistant.`;
+    // SYSTEM + USER PROMPT
+    let prompt = `
+You are an AI assistant named ${assistantName}, created by ${userName}.
+Always reply ONLY in the following JSON format:
+
+{
+  "type": "general",
+  "userInput": "<user sentence>",
+  "response": "<your reply>"
+}
+
+NEVER output anything except valid JSON.
+
+User Input: "${command}"
+`;
 
     if (isPremium && isAdvancedAI) {
       prompt += `
-
-PREMIUM FEATURES ENABLED:
-- You have access to advanced AI capabilities
-- You can maintain conversation context and memory
-- You can provide more detailed and helpful responses
-- You understand multi-turn conversations better
-- You can handle complex queries with more intelligence`;
-
-      if (conversationHistory.length > 0) {
-        prompt += `
-
-RECENT CONVERSATION HISTORY:
-${conversationHistory
-  .slice(-5)
-  .map(
-    (item, index) =>
-      `${index + 1}. User: "${
-        typeof item === "string" ? item : item.command
-      }"\nAssistant: [Previous response]`
-  )
-  .join("\n")}
-
-Use this context to provide more personalized and coherent responses.`;
-      }
+PREMIUM MODE:
+- Provide smarter, more detailed responses.
+- Maintain short-term memory of last 10 messages.
+`;
     }
 
-    if (isPremium && userLanguage !== "en") {
-      const languageMap = {
-        es: "Spanish",
-        fr: "French",
-        de: "German",
-        hi: "Hindi",
-        ja: "Japanese",
-        ko: "Korean",
-        zh: "Chinese",
-      };
-
-      const languageName =
-        languageMap[userLanguage.split("-")[0]] || "English";
+    // CONVERSATION MEMORY FOR PREMIUM USERS
+    if (isPremium && conversationHistory.length > 0) {
+      const lastFew = conversationHistory
+        .slice(-5)
+        .map(
+          (it) =>
+            `User: "${typeof it === "string" ? it : it.command}", Assistant: "[previous reply]"`
+        )
+        .join("\n");
 
       prompt += `
-
-MULTI-LANGUAGE SUPPORT: The user prefers responses in ${languageName} when possible.`;
+RECENT HISTORY:
+${lastFew}
+`;
     }
 
-    prompt += `
+    // MULTI-LANGUAGE SUPPORT
+    if (isPremium && userLanguage !== "en") {
+      prompt += `
+User prefers replies in: ${userLanguage}.
+`;
+    }
 
-Your task is to understand the user's natural language input and respond with a JSON object like this:
-
-{
-  "type": "...",
-  "userInput": "<original sentence>",
-  "response": "<short or detailed reply depending on premium>"
-}
-
-now your userInput- ${command}`;
-
+    // Gemini v1.5 request format
     const payload = {
       contents: [
         {
+          role: "user",
           parts: [{ text: prompt }],
         },
       ],
     };
 
-    if (isPremium && isAdvancedAI) {
-      payload.generationConfig = {
-        temperature: 0.7,
-        maxOutputTokens: 1024,
-      };
+    // OFFICIAL GEMINI 1.5 FLASH ENDPOINT
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+    const result = await axios.post(url, payload);
+
+    const text =
+      result.data?.candidates?.[0]?.content?.parts?.[0]?.text || null;
+
+    if (!text) {
+      console.error("❌ Empty Gemini response");
+      return null;
     }
 
-    const result = await axios.post(apiUrl, payload);
-
-    if (
-      !result.data ||
-      !result.data.candidates ||
-      !result.data.candidates[0]
-    ) {
-      throw new Error("Invalid Gemini API response");
-    }
-
-    return result.data.candidates[0].content.parts[0].text;
+    return text;
   } catch (error) {
     console.error(
-      "Gemini API error:",
+      "❌ Gemini API error:",
       error.response?.status,
       error.response?.data
     );
@@ -114,7 +102,4 @@ now your userInput- ${command}`;
   }
 };
 
-// Also keep default export for safety
 export default getGeminiResponse;
-
-// END OF FILE
