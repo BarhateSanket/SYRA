@@ -1,5 +1,5 @@
 import uploadOnCloudinary from "../config/cloudinary.js";
-import geminiResponse from "../gemini.js";
+import getGeminiResponse from "../gemini.js";
 import User from "../models/user.model.js";
 import moment from "moment";
 
@@ -267,7 +267,7 @@ export const askToAssistant = async (req, res) => {
     const assistantName = user.assistantName;
     const userName = user.name;
 
-    const result = await geminiResponse(command, assistantName, userName, {
+    const result = await getGeminiResponse(command, assistantName, userName, {
       isPremium,
       isAdvancedAI: user.premiumFeatures?.advancedAI || false,
       conversationHistory: user.history.slice(-10),
