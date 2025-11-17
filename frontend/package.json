@@ -15,7 +15,7 @@
     "test:run": "vitest run",
     "cy:open": "cypress open",
     "cy:run": "cypress run",
-    "prepare": "husky",
+    "prepare": "",
     "preview": "vite preview"
   },
   "dependencies": {
