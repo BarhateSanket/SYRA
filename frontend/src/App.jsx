@@ -1,7 +1,4 @@
 import React, { useContext, useEffect, Suspense, lazy } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
-import { UserDataContext } from './ContextApi/UserContext'
-import usePushNotifications from './hooks/usePushNotifications'
 
 // Lazy load components for code splitting
 const Signup = lazy(() => import('./pages/Signup'))
