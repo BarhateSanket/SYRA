@@ -11,7 +11,7 @@ export const getGeminiResponse = async (
 
     if (!apiKey) {
       console.error("❌ Missing GEMINI_API_KEY");
-      return null;
+      return { error: "missing_api_key" };
     }
 
     const {
@@ -88,7 +88,7 @@ User prefers replies in: ${userLanguage}.
 
     if (!text) {
       console.error("❌ Empty Gemini response");
-      return null;
+      return { error: "empty_response" };
     }
 
     return text;
@@ -98,7 +98,19 @@ User prefers replies in: ${userLanguage}.
       error.response?.status,
       error.response?.data
     );
-    return null;
+
+    // Return specific error types based on HTTP status
+    if (error.response?.status === 400) {
+      return { error: "invalid_request" };
+    } else if (error.response?.status === 401) {
+      return { error: "invalid_api_key" };
+    } else if (error.response?.status === 429) {
+      return { error: "rate_limit" };
+    } else if (error.response?.status >= 500) {
+      return { error: "server_error" };
+    } else {
+      return { error: "network_error" };
+    }
   }
 };
 

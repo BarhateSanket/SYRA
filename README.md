@@ -375,11 +375,20 @@ If you encounter "technical issues" or the backend fails to start:
    curl http://localhost:8000/api/health
    ```
 
+#### **AI Assistant Not Responding**
+If the AI assistant says "I'm facing technical issues":
+
+1. **Check Gemini API Key**: Verify `GEMINI_API_KEY` in `backend/.env` is valid
+2. **API Quota**: Check if your Google AI API quota is exceeded
+3. **Network Issues**: Ensure outbound connections to `generativelanguage.googleapis.com`
+4. **API Key Permissions**: Confirm the API key has Gemini API access enabled
+
 #### **Common Issues**
 - **"technical issues" error**: Usually indicates backend connectivity problems
 - **Empty logs**: Check `backend/logs/` directory permissions
 - **MongoDB connection failed**: Verify Atlas IP whitelist and credentials
 - **Sentry errors**: Add `SENTRY_DSN` to environment or remove Sentry initialization
+- **AI responses failing**: Check Gemini API key and quota limits
 
 ---
 

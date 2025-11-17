@@ -274,11 +274,46 @@ export const askToAssistant = async (req, res) => {
       userLanguage: req.headers["accept-language"] || "en"
     });
 
+    // Handle error responses from Gemini API
+    if (result && result.error) {
+      let errorMessage = "I'm facing technical issues. Try again soon.";
+
+      switch (result.error) {
+        case "missing_api_key":
+          errorMessage = "AI service is not configured. Please contact support.";
+          break;
+        case "invalid_api_key":
+          errorMessage = "AI service authentication failed. Please contact support.";
+          break;
+        case "rate_limit":
+          errorMessage = "AI service is busy. Please wait a moment and try again.";
+          break;
+        case "server_error":
+          errorMessage = "AI service is temporarily unavailable. Please try again later.";
+          break;
+        case "network_error":
+          errorMessage = "Network connection issue. Please check your internet and try again.";
+          break;
+        case "invalid_request":
+          errorMessage = "I couldn't process that request. Please try rephrasing.";
+          break;
+        case "empty_response":
+          errorMessage = "I received an incomplete response. Please try again.";
+          break;
+      }
+
+      return res.json({
+        type: "general",
+        userInput: command,
+        response: errorMessage
+      });
+    }
+
     if (!result) {
       return res.json({
         type: "general",
         userInput: command,
-        response: "I'm having trouble processing your request. Try later."
+        response: "I'm having trouble processing your request. Please try again."
       });
     }
 
