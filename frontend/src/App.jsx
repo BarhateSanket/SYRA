@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { UserDataContext } from './context/UserDataContext'
+import { UserDataContext } from './context/UserContext'
 import usePushNotifications from './hooks/usePushNotifications'
 
 // Lazy load components
