@@ -5,34 +5,41 @@ const redisUrl = process.env.REDIS_URL;
 let redisClient;
 
 if (!redisUrl) {
-  console.warn("❌ No REDIS_URL found — Redis is disabled");
-  
-  // Return a dummy object so app doesn't break
+  console.warn("🚫 REDIS_URL not found — Redis disabled");
   redisClient = {
     connect: async () => {},
     get: async () => null,
     set: async () => {},
-    exists: async () => false,
+    del: async () => {},
+    ping: async () => "disabled",
+    on: () => {},
   };
 } else {
   redisClient = createClient({
     url: redisUrl,
     socket: {
-      reconnectStrategy: (retries) => {
-        if (retries > 5) {
-          console.log("Redis: Retry limit exceeded");
-          return new Error("Retry limit exceeded");
-        }
-        return Math.min(retries * 200, 2000);
-      },
+      tls: true, // VERY IMPORTANT FOR UPSTASH
+      rejectUnauthorized: false,
     },
   });
 
-  redisClient.on("error", (err) => console.error("Redis Client Error:", err));
-  
-  redisClient.connect()
-    .then(() => console.log("✅ Connected to Redis on Render"))
-    .catch((err) => console.error("❌ Redis Connection Failed:", err));
+  redisClient.on("error", (err) => {
+    console.error("❌ Redis Client Error:", err);
+  });
+
+  redisClient.on("ready", () => {
+    console.log("✅ Connected to Upstash Redis");
+  });
+
+  (async () => {
+    try {
+      await redisClient.connect();
+    } catch (err) {
+      console.error("❌ Redis connection failed:", err);
+    }
+  })();
 }
 
 export default redisClient;
+
+// END OF FILE

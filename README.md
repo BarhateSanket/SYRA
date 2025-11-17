@@ -80,9 +80,63 @@
 - **Cloudinary Integration**: Secure image storage and processing
 - **Rate Limiting**: Protection against abuse and spam
 
+### 💳 **Payment & Subscription Management**
+- **Razorpay Integration**: Secure payment processing for subscriptions
+- **Flexible Plans**: Monthly and yearly premium plans with trial periods
+- **Billing History**: Complete transaction history and invoice generation
+- **Subscription Management**: Easy upgrade, downgrade, and cancellation
+- **Webhook Handling**: Automated payment status updates
+
+### 📈 **Advanced Analytics & Insights**
+- **User Behavior Tracking**: Comprehensive event tracking and analytics
+- **Command Usage Analytics**: Insights into voice command patterns
+- **User Segmentation**: Demographic and behavioral user grouping
+- **Conversion Funnel**: Track user journey from signup to premium
+- **A/B Testing**: Experimentation framework for feature optimization
+
+### 🌤️ **Weather & Environmental Data**
+- **Current Weather**: Real-time weather information for any location
+- **Weather Forecasts**: 5-day detailed weather predictions
+- **Location-Based**: GPS and city-based weather queries
+
+### 📰 **News & Information**
+- **News Aggregation**: Latest news from various sources
+- **Category Filtering**: News by topics and regions
+- **Real-time Updates**: Fresh news content delivery
+
+### 📊 **Financial Data**
+- **Stock Market**: Real-time stock prices and market data
+- **Currency Conversion**: Live exchange rates and conversions
+- **Financial Tools**: Investment tracking and analysis
+
+### 🧮 **Utility Conversions**
+- **Unit Conversion**: Comprehensive unit conversion tools
+- **Multiple Categories**: Length, weight, temperature, volume, etc.
+- **Real-time Calculations**: Instant conversion results
+
+### ⏰ **Reminders & Scheduling**
+- **Smart Reminders**: AI-powered reminder setting
+- **Recurring Tasks**: Automated recurring reminders
+- **Calendar Integration**: Sync with external calendars
+
+### 🏠 **Smart Home Integration**
+- **Device Control**: Manage smart home devices
+- **Automation**: Create custom automation rules
+- **IoT Support**: Compatible with major smart home platforms
+
+### 🏥 **Health Monitoring**
+- **Health Metrics**: Track personal health data
+- **Wellness Insights**: AI-powered health recommendations
+- **Integration**: Connect with health devices and apps
+
+### 📊 **System Monitoring**
+- **Performance Metrics**: Real-time system performance data
+- **Health Checks**: Automated system health monitoring
+- **Logging**: Comprehensive error and activity logging
+
 ---
 
-## 🏗️ Architecture
+## ️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -179,16 +233,49 @@ SYRA-AI/
 │   │   ├── db.js               # Database connection
 │   │   └── token.js            # JWT configuration
 │   ├── 📁 controllers/          # Business logic
-│   │   ├── auth.controller.js   # Authentication
-│   │   └── user.controller.js   # User management
+│   │   ├── analytics.controller.js    # Analytics and insights
+│   │   ├── auth.controller.js         # Authentication
+│   │   ├── currency.controller.js     # Currency conversion
+│   │   ├── github.controller.js       # GitHub integration
+│   │   ├── google.controller.js       # Google services integration
+│   │   ├── health.controller.js       # Health monitoring
+│   │   ├── metrics.controller.js      # System metrics
+│   │   ├── monitoring.controller.js   # System monitoring
+│   │   ├── news.controller.js         # News aggregation
+│   │   ├── payment.controller.js      # Payment processing
+│   │   ├── reminders.controller.js    # Reminder management
+│   │   ├── smartHome.controller.js    # Smart home integration
+│   │   ├── stocks.controller.js       # Stock market data
+│   │   ├── unitConversion.controller.js # Unit conversions
+│   │   ├── user.controller.js         # User management
+│   │   └── weather.controller.js      # Weather data
 │   ├── 📁 middlewares/          # Custom middleware
 │   │   ├── isAuth.js           # Authentication check
 │   │   └── multer.js           # File upload handling
 │   ├── 📁 models/              # Database models
+│   │   ├── abtest.model.js     # A/B testing models
+│   │   ├── analytics.model.js  # Analytics data models
+│   │   ├── invoice.model.js    # Invoice models
+│   │   ├── payment.model.js    # Payment models
+│   │   ├── reminder.model.js   # Reminder models
+│   │   ├── subscription.model.js # Subscription models
 │   │   └── user.model.js       # User schema
 │   └── 📁 routes/              # API routes
-│       ├── auth.routes.js      # Auth endpoints
-│       └── user.routes.js      # User endpoints
+│       ├── analytics.routes.js     # Analytics endpoints
+│       ├── auth.routes.js          # Authentication endpoints
+│       ├── currency.routes.js      # Currency conversion endpoints
+│       ├── github.routes.js        # GitHub integration endpoints
+│       ├── google.routes.js        # Google services endpoints
+│       ├── health.routes.js        # Health check endpoints
+│       ├── metrics.routes.js       # Metrics endpoints
+│       ├── monitoring.routes.js    # Monitoring endpoints
+│       ├── news.routes.js          # News endpoints
+│       ├── reminders.routes.js     # Reminder endpoints
+│       ├── smartHome.routes.js     # Smart home endpoints
+│       ├── stocks.routes.js        # Stock market endpoints
+│       ├── unitConversion.routes.js # Unit conversion endpoints
+│       ├── user.routes.js          # User management endpoints
+│       └── weather.routes.js       # Weather endpoints
 │
 └── 📁 frontend/                 # React Application
     ├── 📄 index.html           # HTML template
@@ -387,6 +474,115 @@ Send command to AI assistant.
   "type": "youtube-search",
   "userInput": "coding tutorials",
   "response": "Opening YouTube with coding tutorials"
+}
+```
+
+### **Payment Endpoints**
+
+#### **POST** `/api/payment/create-subscription`
+Create a new subscription.
+
+**Request Body:**
+```json
+{
+  "planType": "monthly"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Subscription created",
+  "data": {
+    "subscriptionId": "...",
+    "razorpaySubscriptionId": "...",
+    "planType": "monthly",
+    "trialEndsAt": "2025-11-24T00:00:00.000Z"
+  }
+}
+```
+
+#### **GET** `/api/payment/billing-history`
+Get user's billing history.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "payments": [
+      {
+        "id": "...",
+        "amount": 999.00,
+        "currency": "INR",
+        "status": "captured",
+        "createdAt": "2025-11-17T00:00:00.000Z",
+        "planType": "monthly"
+      }
+    ]
+  }
+}
+```
+
+### **Weather Endpoints**
+
+#### **GET** `/api/weather?city=London&country=GB`
+Get current weather data.
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Weather data for London",
+  "data": {
+    "location": {
+      "city": "London",
+      "country": "GB",
+      "coordinates": { "lat": 51.5074, "lon": -0.1278 }
+    },
+    "weather": {
+      "main": "Clouds",
+      "description": "overcast clouds"
+    },
+    "temperature": {
+      "current": 15,
+      "feels_like": 14,
+      "min": 13,
+      "max": 17
+    }
+  }
+}
+```
+
+### **Analytics Endpoints**
+
+#### **POST** `/api/analytics/track`
+Track user events.
+
+**Request Body:**
+```json
+{
+  "eventType": "feature_usage",
+  "eventName": "voice_command",
+  "properties": { "command": "open youtube" }
+}
+```
+
+#### **GET** `/api/analytics/user-behavior?timeRange=30d`
+Get user behavior analytics.
+
+**Response:**
+```json
+{
+  "eventSummary": {
+    "totalEvents": 150,
+    "eventsByType": { "feature_usage": 120, "page_view": 30 }
+  },
+  "userEngagement": {
+    "activeUsers": 25,
+    "averageSessionDuration": 450000
+  }
 }
 ```
 
