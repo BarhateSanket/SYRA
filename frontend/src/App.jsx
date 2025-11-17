@@ -18,7 +18,7 @@ const AddPaymentMethod = lazy(() => import('./pages/AddPaymentMethod'))
 const Analytics = lazy(() => import('./pages/Analytics'))
 
 function App() {
-  const { userData, setUserData } = useContext(userDataContext)
+  const { userData, setUserData } = useContext(UserDataContext)
   const { isSupported, permission, subscribe } = usePushNotifications()
 
   useEffect(() => {
