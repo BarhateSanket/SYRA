@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, Suspense, lazy } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { userDataContext } from './ContextApi/UserContext'
+import { UserDataContext } from './ContextApi/UserContext'
 import usePushNotifications from './hooks/usePushNotifications'
 
 // Lazy load components for code splitting
