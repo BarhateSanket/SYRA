@@ -1,13 +1,13 @@
 import React, { useContext, useEffect, useState, useMemo } from 'react'
 import { FaHistory, FaSearch, FaTrash, FaDownload, FaFilter, FaCalendar, FaUser, FaRobot, FaArrowLeft } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
-import { userDataContext } from '../ContextApi/UserContext';
+import { UserDataContext } from '../ContextApi/UserContext.jsx';
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 
 function History() {
   const navigate = useNavigate();
-  const { userData, serverUrl } = useContext(userDataContext);
+  const { userData, serverUrl } = useContext(UserDataContext);
   const [conversations, setConversations] = useState([]);
   const [filteredConversations, setFilteredConversations] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');

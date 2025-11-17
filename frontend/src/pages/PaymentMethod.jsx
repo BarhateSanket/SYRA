@@ -2,12 +2,12 @@ import React, { useState, useEffect, useContext } from 'react';
 import { FaCreditCard, FaPlus, FaTrash, FaEdit, FaCalendarAlt, FaRupeeSign, FaSpinner, FaCheckCircle, FaTimesCircle, FaPauseCircle } from 'react-icons/fa';
 import { useNavigate } from 'react-router-dom';
 import Header from '../components/Header';
-import { userDataContext } from '../ContextApi/UserContext';
+import { UserDataContext } from '../ContextApi/UserContext.jsx';
 import Toast from '../components/Toast';
 
 function PaymentMethod() {
   const navigate = useNavigate();
-  const { userData, setUserData } = useContext(userDataContext);
+  const { userData, setUserData } = useContext(UserDataContext);
   const [subscription, setSubscription] = useState(null);
   const [billingHistory, setBillingHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(true);

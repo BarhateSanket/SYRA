@@ -4,12 +4,12 @@ import { IoEye } from "react-icons/io5";
 import { IoEyeOff } from "react-icons/io5";
 import { FaRocket, FaBrain, FaShieldAlt, FaStar } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
-import { userDataContext } from '../ContextApi/UserContext';
+import { UserDataContext } from '../ContextApi/UserContext.jsx';
 import axios from "axios"
 import Header from '../components/Header'
 function SignIn() {
   const [showPassword,setShowPassword]=useState(false)
-  const {serverUrl,userData,setUserData}=useContext(userDataContext)
+  const {serverUrl,userData,setUserData}=useContext(UserDataContext)
   const navigate=useNavigate()
   const [email,setEmail]=useState("")
   const [loading,setLoading]=useState(false)
