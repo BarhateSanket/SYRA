@@ -2,6 +2,7 @@ import uploadOnCloudinary from "../config/cloudinary.js";
 import getGeminiResponse from "../gemini.js";
 import User from "../models/user.model.js";
 import moment from "moment";
+import mongoose from "mongoose";
 
 /* ============================================================
    GET CURRENT USER
@@ -232,9 +233,23 @@ export const askToAssistant = async (req, res) => {
   try {
     const { command } = req.body;
 
+    // Check database connection first
+    if (mongoose.connection.readyState !== 1) {
+      return res.json({
+        type: "general",
+        userInput: command,
+        response: "Database connection issue. Please try again in a moment."
+      });
+    }
+
     const user = await User.findById(req.userId);
-    if (!user)
-      return res.status(404).json({ response: "User not found" });
+    if (!user) {
+      return res.json({
+        type: "general",
+        userInput: command,
+        response: "User session expired. Please refresh the page and try again."
+      });
+    }
 
     const isPremium =
       user.subscriptionStatus === "active" &&
@@ -261,8 +276,14 @@ export const askToAssistant = async (req, res) => {
       }
     }
 
-    user.history.push({ command, timestamp: new Date() });
-    await user.save();
+    // Save command to history (don't fail the whole request if this fails)
+    try {
+      user.history.push({ command, timestamp: new Date() });
+      await user.save();
+    } catch (dbError) {
+      console.error("Failed to save command history:", dbError.message);
+      // Continue without saving history
+    }
 
     const assistantName = user.assistantName;
     const userName = user.name;
@@ -378,10 +399,11 @@ export const askToAssistant = async (req, res) => {
         });
     }
   } catch (error) {
+    console.error("Ask Assistant Error:", error.message);
     return res.json({
       type: "general",
       userInput: req.body.command || "unknown",
-      response: "I'm facing technical issues. Try again soon."
+      response: "Server error occurred. Please try again."
     });
   }
 };
