@@ -345,8 +345,41 @@ npm run dev
 ```
 
 4. **Access the application**
-- Frontend: http://:5174
-- Backend API: http://localhost:5000
+- Frontend: http://localhost:5173
+- Backend API: http://localhost:8000
+
+### **Troubleshooting**
+
+#### **Backend Not Starting**
+If you encounter "technical issues" or the backend fails to start:
+
+1. **Check Environment Variables**: Ensure all required variables are set in `backend/.env`:
+   - `MONGODB_URL`: Valid MongoDB Atlas connection string
+   - `JWT_SECRET`: Strong secret key for JWT tokens
+   - `GEMINI_API_KEY`: Valid Google Gemini AI API key
+   - `SENTRY_DSN`: Optional, but recommended for error tracking
+
+2. **Database Connection**: Test MongoDB connection:
+   ```bash
+   cd backend
+   node -e "require('./config/db.js').default()"
+   ```
+
+3. **Port Conflicts**: Check if port 8000 is available:
+   ```bash
+   netstat -ano | findstr :8000
+   ```
+
+4. **Health Check**: Once running, verify backend health:
+   ```bash
+   curl http://localhost:8000/api/health
+   ```
+
+#### **Common Issues**
+- **"technical issues" error**: Usually indicates backend connectivity problems
+- **Empty logs**: Check `backend/logs/` directory permissions
+- **MongoDB connection failed**: Verify Atlas IP whitelist and credentials
+- **Sentry errors**: Add `SENTRY_DSN` to environment or remove Sentry initialization
 
 ---
 
