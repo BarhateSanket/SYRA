@@ -10,7 +10,7 @@
 
 **Experience the future of AI-powered voice assistance with SYRA - Your intelligent, customizable companion.**
 
-[🌐 Live Demo](https://syra-ai.vercel.app) • [📖 Documentation](#-documentation) • [🎯 Features](#-features)
+[🌐 Live Demo](https://syra-ai-voice.vercel.app) • [📖 Documentation](#-documentation) • [🎯 Features](#-features)
 
 </div>
 

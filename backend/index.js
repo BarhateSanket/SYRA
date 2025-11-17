@@ -77,7 +77,7 @@ app.use(rateLimiter);
 // CORS
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://syra-voice.vercel.app"],
+    origin: ["http://localhost:5173", "https://syra-ai-voice.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
