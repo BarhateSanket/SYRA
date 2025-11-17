@@ -84,6 +84,19 @@ function Home() {
       return;
     }
 
+    // Check if we have user activation (required for speech synthesis)
+    if (!document.hasFocus && !listening) {
+      console.warn("Speech synthesis blocked: no user activation");
+      setAiText(text);
+      setTimeout(() => {
+        setAiText("");
+        setTimeout(() => {
+          startRecognition();
+        }, 800);
+      }, 2000);
+      return;
+    }
+
     const utterance = new SpeechSynthesisUtterance(text);
 
     // Parse voice setting to get language and gender preference
@@ -141,6 +154,20 @@ function Home() {
 
     utterance.onerror = (error) => {
       console.warn("Speech synthesis error:", error);
+
+      // Show user-friendly error message for speech issues
+      if (error.error === 'not-allowed') {
+        setToast({
+          message: "Speech synthesis blocked. Click 'Allow' when prompted for microphone access.",
+          type: "warning"
+        });
+      } else {
+        setToast({
+          message: "Speech synthesis failed. Response shown as text.",
+          type: "warning"
+        });
+      }
+
       // Fallback: just set the text without speaking
       setAiText(text);
       setTimeout(() => {
@@ -164,6 +191,13 @@ function Home() {
       synth.speak(utterance);
     } catch (error) {
       console.warn("Speech synthesis failed:", error);
+
+      // Show user-friendly error message
+      setToast({
+        message: "Voice synthesis failed. Response shown as text instead.",
+        type: "warning"
+      });
+
       // Fallback: just set the text without speaking
       setAiText(text);
       setTimeout(() => {

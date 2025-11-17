@@ -383,6 +383,14 @@ If the AI assistant says "I'm facing technical issues":
 3. **Network Issues**: Ensure outbound connections to `generativelanguage.googleapis.com`
 4. **API Key Permissions**: Confirm the API key has Gemini API access enabled
 
+#### **Speech Synthesis Issues**
+If you see "not-allowed" errors or no voice responses:
+
+1. **Browser Permissions**: Grant microphone and speech synthesis permissions when prompted
+2. **User Activation**: Click anywhere on the page first to enable speech features
+3. **Browser Settings**: Check browser settings for speech synthesis permissions
+4. **Fallback Mode**: The app will show responses as text if speech fails
+
 #### **Common Issues**
 - **"technical issues" error**: Usually indicates backend connectivity problems
 - **Empty logs**: Check `backend/logs/` directory permissions
