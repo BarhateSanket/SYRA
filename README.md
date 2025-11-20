@@ -429,6 +429,17 @@ CLOUDINARY_API_SECRET=your_api_secret
 EMAIL_SERVICE=gmail
 EMAIL_USER=your_email@gmail.com
 EMAIL_PASS=your_app_password
+
+# Dictionary API (Optional)
+DICTIONARY_API_KEY=your_merriam_webster_api_key_here
+
+# External APIs (Optional)
+WEATHER_API_KEY=your_openweather_api_key
+NEWS_API_KEY=your_newsapi_key
+GITHUB_CLIENT_ID=your_github_oauth_client_id
+GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 ```
 
 ### **Frontend Configuration**

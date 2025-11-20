@@ -17,8 +17,7 @@ const invoiceSchema = new mongoose.Schema({
   },
   invoiceNumber: {
     type: String,
-    required: true,
-    unique: true
+    required: true
   },
   billingPeriod: {
     start: {

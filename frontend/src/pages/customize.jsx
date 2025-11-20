@@ -63,7 +63,7 @@ setSelectedImage("input")
               <img src={selectedImage} alt="Selected" className='w-full h-full object-cover' />
             </div>
           )}
-          {frontendImage && (
+          {frontendImage && selectedImage === "input" && (
             <div className='w-[100px] h-[150px] sm:w-[120px] sm:h-[180px] rounded-2xl overflow-hidden shadow-2xl border-4 border-purple-400'>
               <img src={frontendImage} alt="Uploaded" className='w-full h-full object-cover' />
             </div>

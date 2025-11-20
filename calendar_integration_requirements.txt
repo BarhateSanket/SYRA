@@ -1,0 +1,66 @@
+CALENDAR INTEGRATION REQUIREMENTS FOR SYRA APPLICATION
+
+This document outlines the additional setup requirements for the enhanced Google Calendar voice command integration.
+
+DEPENDENCIES INSTALLED:
+- chrono-node: For natural language date/time parsing
+
+GOOGLE CALENDAR API SETUP:
+
+1. Google Cloud Console Configuration:
+   - Ensure Google Calendar API is enabled in your Google Cloud project
+   - Required OAuth 2.0 scopes:
+     * https://www.googleapis.com/auth/calendar
+     * https://www.googleapis.com/auth/calendar.events
+
+2. Environment Variables:
+   - GOOGLE_CLIENT_ID: Your Google OAuth client ID
+   - GOOGLE_CLIENT_SECRET: Your Google OAuth client secret
+   - GEMINI_API_KEY: For AI-powered command parsing
+
+3. User Permissions:
+   - Users must connect their Google account through the existing OAuth flow
+   - Calendar read/write permissions are required for full functionality
+
+VOICE COMMAND PATTERNS IMPLEMENTED:
+
+Scheduling Events:
+- "schedule [event] at [time/date]"
+- "add event to calendar [details]"
+
+Viewing Calendar:
+- "what's on my calendar [today/tomorrow/this week]"
+- "show me my calendar [period]"
+- "list my events [period]"
+
+Reminders:
+- "remind me about [event]"
+
+API ENDPOINTS ADDED:
+- GET /api/google/calendar/events?period=[period]&startDate=[date]&endDate=[date]&maxResults=[number]
+- POST /api/google/calendar/events (with conflict detection)
+- POST /api/google/calendar/reminder
+
+FEATURES IMPLEMENTED:
+- Natural language date/time parsing using chrono-node
+- Timezone-aware scheduling (defaults to Asia/Calcutta)
+- Conflict detection for scheduling
+- Reminder creation with customizable timing
+- Period-based calendar viewing (today, tomorrow, this week, etc.)
+- Error handling for invalid dates and permission issues
+
+SUPPORTED TIMEZONES:
+- Asia/Calcutta (IST)
+- America/New_York (EST)
+- America/Los_Angeles (PST)
+- Europe/London (GMT)
+- Europe/Paris (CET)
+- Asia/Tokyo (JST)
+- Australia/Sydney (AEST)
+
+USAGE NOTES:
+- All calendar operations require user authentication
+- Dates are parsed and stored in UTC, displayed in user's timezone
+- Conflict detection can be disabled by setting checkConflicts=false
+- Default reminder time is 15 minutes before event
+- Maximum 10 events returned by default (configurable)

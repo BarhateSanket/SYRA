@@ -4,6 +4,7 @@ import {
     sendEmail,
     getCalendarEvents,
     createCalendarEvent,
+    createReminderEvent,
     listDriveFiles,
     searchPhotos,
     getPlaylists,
@@ -20,6 +21,7 @@ router.post('/gmail/send', isAuth, sendEmail);
 // Calendar
 router.get('/calendar/events', isAuth, getCalendarEvents);
 router.post('/calendar/events', isAuth, createCalendarEvent);
+router.post('/calendar/reminder', isAuth, createReminderEvent);
 
 // Google Drive
 router.get('/drive/files', isAuth, listDriveFiles);

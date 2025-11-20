@@ -3,20 +3,35 @@ import getGeminiResponse from "../gemini.js";
 import User from "../models/user.model.js";
 import moment from "moment";
 import mongoose from "mongoose";
+import jwt from "jsonwebtoken";
 
 /* ============================================================
    GET CURRENT USER
 ============================================================ */
 export const getCurrentUser = async (req, res) => {
   try {
-    const userId = req.userId;
+    const token = req.cookies?.token;
+    if (!token) {
+      return res.status(200).json(null);
+    }
 
-    const user = await User.findById(userId)
+    let payload;
+    try {
+      payload = jwt.verify(token, process.env.JWT_SECRET);
+    } catch (err) {
+      return res.status(200).json(null);
+    }
+
+    if (!payload.userId || !mongoose.Types.ObjectId.isValid(payload.userId)) {
+      return res.status(200).json(null);
+    }
+
+    const user = await User.findById(payload.userId)
       .select("-password")
       .populate("currentSubscription");
 
     if (!user) {
-      return res.status(400).json({ message: "User not found" });
+      return res.status(200).json(null);
     }
 
     return res.status(200).json(user);
@@ -29,26 +44,34 @@ export const getCurrentUser = async (req, res) => {
    UPDATE ASSISTANT PROFILE
 ============================================================ */
 export const updateAssistant = async (req, res) => {
-  try {
-    const { assistantName, imageUrl } = req.body;
+    try {
+      const { assistantName, imageUrl } = req.body;
 
-    const updateData = { assistantName };
+      const updateData = { assistantName };
 
-    if (req.file) {
-      updateData.assistantImage = await uploadOnCloudinary(req.file.path);
-    } else if (imageUrl) {
-      updateData.assistantImage = imageUrl;
+      if (req.file) {
+        try {
+          updateData.assistantImage = await uploadOnCloudinary(req.file.path);
+        } catch (uploadError) {
+          console.error("Image upload failed:", uploadError.message);
+          // Continue without image if upload fails
+          // Optionally set a default image or leave as is
+        }
+      } else if (imageUrl) {
+        updateData.assistantImage = imageUrl;
+      }
+
+      const user = await User.findByIdAndUpdate(req.userId, updateData, {
+        new: true
+      }).select("-password");
+
+      return res.status(200).json(user);
+    } catch (error) {
+      console.error("Update Assistant Error:", error.message);
+      console.error("Error stack:", error.stack);
+      return res.status(400).json({ message: "updateAssistantError", details: error.message });
     }
-
-    const user = await User.findByIdAndUpdate(req.userId, updateData, {
-      new: true
-    }).select("-password");
-
-    return res.status(200).json(user);
-  } catch (error) {
-    return res.status(400).json({ message: "updateAssistantError" });
-  }
-};
+  };
 
 /* ============================================================
    CONTACT FORM

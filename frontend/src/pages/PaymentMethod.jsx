@@ -219,6 +219,18 @@ function PaymentMethod() {
               )}
             </div>
 
+            {/* Finish Button */}
+            {subscription && (subscription.status === 'active' || subscription.status === 'trial') && (
+              <div className="text-center py-6">
+                <button
+                  onClick={() => navigate('/')}
+                  className="bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-semibold px-8 py-3 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl"
+                >
+                  Finish
+                </button>
+              </div>
+            )}
+
             {/* No Subscription */}
             {!subscription && !isLoading && (
               <div className="text-center py-12">

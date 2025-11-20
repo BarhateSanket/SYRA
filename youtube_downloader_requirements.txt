@@ -1,0 +1,70 @@
+YouTube Downloader Setup Requirements
+====================================
+
+Backend Dependencies:
+- ytdl-core: ^4.11.5 (already installed via npm install ytdl-core)
+
+Environment Variables:
+No additional environment variables required. The existing YouTube API configuration is reused.
+
+Database Models:
+- DownloadHistory: Tracks user downloads, formats, file sizes, and status
+- Subscription: Used for premium feature access control
+
+File Storage:
+- Downloads are temporarily stored in backend/downloads/ directory
+- Files are automatically cleaned up 1 hour after download completion
+- Ensure the backend has write permissions to the downloads directory
+
+API Endpoints:
+- GET /api/youtube/download/info?url=<youtube_url> - Get video information and formats
+- POST /api/youtube/download/download - Start download with format selection
+- GET /api/youtube/download/status/:downloadId - Check download progress
+- GET /api/youtube/download/file/:downloadId - Download completed file
+- GET /api/youtube/download/history - Get user's download history
+- DELETE /api/youtube/download/cancel/:downloadId - Cancel ongoing download
+
+Rate Limiting:
+- Premium users: 5 downloads per hour
+- Downloads are queued and processed sequentially per user
+
+Frontend Components:
+- YouTubeDownloader.jsx: Main download interface
+- UI Components: Input, Select, Progress, Alert, Label, Badge (created in ui/ directory)
+
+Security Features:
+- Authentication required for all download endpoints
+- Premium subscription required (checked via isPremium middleware)
+- Rate limiting per user
+- File cleanup after download to prevent storage abuse
+
+Supported Formats:
+- MP4 Video: 360p, 720p, 1080p
+- MP3 Audio: 128kbps
+
+Copyright Compliance:
+- Frontend displays copyright disclaimer
+- Users warned about respecting content creator rights
+- No automatic copyright detection (user responsibility)
+
+Error Handling:
+- YouTube API quota limits
+- Invalid URLs
+- Network timeouts
+- File system errors
+- Download failures with proper cleanup
+
+Monitoring:
+- All download operations logged
+- Download history tracked in database
+- Error logging for troubleshooting
+
+Setup Steps:
+1. Backend dependencies installed (ytdl-core)
+2. Database models created (DownloadHistory)
+3. Routes registered in index.js
+4. Frontend components created
+5. App routing updated
+6. CommandParser updated for download commands
+
+Note: This feature is premium-only and requires active subscription.

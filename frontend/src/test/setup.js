@@ -1,4 +1,15 @@
 import { expect, afterEach } from 'vitest'
+import React, { act } from 'react'
+import * as ReactDOMTestUtils from 'react-dom/test-utils'
+
+// Fix for React 19: act is not on React object, set it manually
+React.act = act
+
+// Fix for React 19: act is no longer in react-dom/test-utils
+if (!ReactDOMTestUtils.act) {
+  ReactDOMTestUtils.act = act
+}
+
 import { cleanup } from '@testing-library/react'
 import * as matchers from '@testing-library/jest-dom/matchers'
 

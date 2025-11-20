@@ -26,10 +26,28 @@ export const getGeminiResponse = async (
 You are an AI assistant named ${assistantName}, created by ${userName}.
 Always reply ONLY in the following JSON format:
 
+For general responses:
 {
   "type": "general",
   "userInput": "<user sentence>",
   "response": "<your reply>"
+}
+
+For dictionary commands (define, spell check):
+{
+  "type": "dictionary",
+  "action": "define" or "spellcheck",
+  "query": "<word to process>"
+}
+
+For calendar commands (schedule, view, remind):
+{
+  "type": "calendar",
+  "action": "schedule" or "view" or "remind" or "add",
+  "event": "<event name/title>" (for schedule/remind),
+  "time": "<natural language time/date>" (for schedule),
+  "period": "<today/tomorrow/this week/etc>" (for view),
+  "details": "<event details>" (for add)
 }
 
 NEVER output anything except valid JSON.
@@ -79,7 +97,7 @@ User prefers replies in: ${userLanguage}.
     };
 
     // OFFICIAL GEMINI 1.5 FLASH ENDPOINT
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
     const result = await axios.post(url, payload);
 

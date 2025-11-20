@@ -99,25 +99,47 @@ export const sendEmail = async (req, res) => {
 };
 
 /* -----------------------------------------------------
-   Google Calendar — List Events
+    Google Calendar — List Events
 ----------------------------------------------------- */
 export const getCalendarEvents = async (req, res) => {
   try {
     if (!requireGoogleTokens(req, res)) return;
 
+    const { period, startDate, endDate, maxResults = 10 } = req.query;
     const tokens = req.user.googleTokens.tokens;
     const auth = getAuthenticatedClient(tokens);
     const { calendar } = initializeGoogleClients(auth);
 
+    let timeMin, timeMax;
+
+    if (period) {
+      // Use DateParser to handle period-based queries
+      const DateParser = (await import('../utils/dateParser.js')).default;
+      const periodRange = DateParser.parsePeriod(period, req.user.timezone || 'Asia/Calcutta');
+      timeMin = periodRange.startDate;
+      timeMax = periodRange.endDate;
+    } else if (startDate) {
+      timeMin = startDate;
+      timeMax = endDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days from now
+    } else {
+      timeMin = new Date().toISOString();
+    }
+
     const events = await calendar.events.list({
       calendarId: "primary",
-      timeMin: new Date().toISOString(),
+      timeMin: timeMin,
+      timeMax: timeMax,
       singleEvents: true,
-      maxResults: 10,
+      maxResults: parseInt(maxResults),
       orderBy: "startTime",
     });
 
-    res.json({ success: true, events: events.data.items });
+    res.json({
+      success: true,
+      events: events.data.items || [],
+      period: period,
+      timeRange: { start: timeMin, end: timeMax }
+    });
   } catch (error) {
     console.error("Calendar list error:", error);
     res.status(500).json({ success: false, error: "Failed to get calendar events" });
@@ -125,23 +147,76 @@ export const getCalendarEvents = async (req, res) => {
 };
 
 /* -----------------------------------------------------
-   Google Calendar — Create Event
+    Google Calendar — Create Event
 ----------------------------------------------------- */
 export const createCalendarEvent = async (req, res) => {
   try {
     if (!requireGoogleTokens(req, res)) return;
 
-    const { summary, description, startTime, endTime } = req.body;
+    const { summary, description, startTime, endTime, timeString, checkConflicts = true } = req.body;
     const tokens = req.user.googleTokens.tokens;
-
     const auth = getAuthenticatedClient(tokens);
     const { calendar } = initializeGoogleClients(auth);
 
+    // Parse natural language time if provided
+    let parsedStartTime = startTime;
+    let parsedEndTime = endTime;
+
+    if (timeString && !startTime) {
+      const DateParser = (await import('../utils/dateParser.js')).default;
+      const parsed = DateParser.parseDateTime(timeString, req.user.timezone || 'Asia/Calcutta');
+
+      if (!parsed.success) {
+        return res.status(400).json({
+          success: false,
+          error: `Invalid date/time: ${parsed.error}`
+        });
+      }
+
+      parsedStartTime = parsed.startDate;
+      parsedEndTime = parsed.endDate || new Date(new Date(parsed.startDate).getTime() + 60 * 60 * 1000).toISOString(); // 1 hour default
+    }
+
+    // Validate required fields
+    if (!summary || !parsedStartTime) {
+      return res.status(400).json({
+        success: false,
+        error: "Event summary and start time are required"
+      });
+    }
+
+    // Check for scheduling conflicts if requested
+    if (checkConflicts) {
+      const conflicts = await calendar.events.list({
+        calendarId: "primary",
+        timeMin: parsedStartTime,
+        timeMax: parsedEndTime,
+        singleEvents: true,
+        maxResults: 5
+      });
+
+      if (conflicts.data.items && conflicts.data.items.length > 0) {
+        return res.status(409).json({
+          success: false,
+          error: "Scheduling conflict detected",
+          conflicts: conflicts.data.items.map(event => ({
+            id: event.id,
+            summary: event.summary,
+            start: event.start,
+            end: event.end
+          }))
+        });
+      }
+    }
+
     const event = {
       summary,
-      description,
-      start: { dateTime: startTime },
-      end: { dateTime: endTime },
+      description: description || '',
+      start: { dateTime: parsedStartTime },
+      end: { dateTime: parsedEndTime },
+      reminders: {
+        useDefault: true
+      }
     };
 
     const result = await calendar.events.insert({
@@ -149,10 +224,22 @@ export const createCalendarEvent = async (req, res) => {
       requestBody: event,
     });
 
-    res.json({ success: true, event: result.data });
+    res.json({
+      success: true,
+      event: result.data,
+      parsedTime: timeString ? { original: timeString, start: parsedStartTime, end: parsedEndTime } : null
+    });
   } catch (error) {
     console.error("Calendar create error:", error);
-    res.status(500).json({ success: false, error: "Failed to create event" });
+
+    // Handle specific Google Calendar API errors
+    if (error.code === 400) {
+      res.status(400).json({ success: false, error: "Invalid event data" });
+    } else if (error.code === 403) {
+      res.status(403).json({ success: false, error: "Insufficient calendar permissions" });
+    } else {
+      res.status(500).json({ success: false, error: "Failed to create event" });
+    }
   }
 };
 
@@ -231,7 +318,76 @@ export const getPlaylists = async (req, res) => {
 };
 
 /* -----------------------------------------------------
-   YouTube — Subscriptions
+    Google Calendar — Create Reminder Event
+----------------------------------------------------- */
+export const createReminderEvent = async (req, res) => {
+  try {
+    if (!requireGoogleTokens(req, res)) return;
+
+    const { event: eventTitle, timeString, reminderMinutes = 15 } = req.body;
+    const tokens = req.user.googleTokens.tokens;
+    const auth = getAuthenticatedClient(tokens);
+    const { calendar } = initializeGoogleClients(auth);
+
+    // Parse the time for the reminder
+    const DateParser = (await import('../utils/dateParser.js')).default;
+    const parsed = DateParser.parseDateTime(timeString, req.user.timezone || 'Asia/Calcutta');
+
+    if (!parsed.success) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid date/time: ${parsed.error}`
+      });
+    }
+
+    const eventTime = new Date(parsed.startDate);
+    const reminderTime = new Date(eventTime.getTime() - (reminderMinutes * 60 * 1000));
+
+    // Create the main event
+    const event = {
+      summary: `Reminder: ${eventTitle}`,
+      description: `Reminder for: ${eventTitle}`,
+      start: { dateTime: parsed.startDate },
+      end: { dateTime: parsed.endDate || new Date(eventTime.getTime() + 60 * 60 * 1000).toISOString() },
+      reminders: {
+        useDefault: false,
+        overrides: [
+          { method: 'popup', minutes: reminderMinutes },
+          { method: 'email', minutes: reminderMinutes }
+        ]
+      }
+    };
+
+    const result = await calendar.events.insert({
+      calendarId: "primary",
+      requestBody: event,
+    });
+
+    res.json({
+      success: true,
+      event: result.data,
+      reminder: {
+        eventTitle,
+        eventTime: parsed.startDate,
+        reminderTime: reminderTime.toISOString(),
+        reminderMinutes
+      }
+    });
+  } catch (error) {
+    console.error("Calendar reminder create error:", error);
+
+    if (error.code === 400) {
+      res.status(400).json({ success: false, error: "Invalid reminder data" });
+    } else if (error.code === 403) {
+      res.status(403).json({ success: false, error: "Insufficient calendar permissions" });
+    } else {
+      res.status(500).json({ success: false, error: "Failed to create reminder" });
+    }
+  }
+};
+
+/* -----------------------------------------------------
+    YouTube — Subscriptions
 ----------------------------------------------------- */
 export const getSubscriptions = async (req, res) => {
   try {

@@ -6,6 +6,7 @@ import usePushNotifications from './hooks/usePushNotifications'
 // Lazy load components
 const Signup = lazy(() => import('./pages/Signup'))
 const Signin = lazy(() => import('./pages/Signin'))
+const Welcome = lazy(() => import('./pages/Welcome'))
 const Customize = lazy(() => import('./pages/customize'))
 const Home = lazy(() => import('./pages/Home'))
 const Customize2 = lazy(() => import('./pages/customize2'))
@@ -16,6 +17,7 @@ const History = lazy(() => import('./pages/History'))
 const PaymentMethod = lazy(() => import('./pages/PaymentMethod'))
 const AddPaymentMethod = lazy(() => import('./pages/AddPaymentMethod'))
 const Analytics = lazy(() => import('./pages/Analytics'))
+const YouTubeDownloader = lazy(() => import('./pages/YouTubeDownloader'))
 
 function App() {
   const { userData, setUserData } = useContext(UserDataContext)
@@ -30,17 +32,18 @@ function App() {
   return (
     <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
       <Routes>
-        <Route 
-          path='/' 
+        <Route
+          path='/'
           element={
-            userData?.assistantImage && userData?.assistantName 
-              ? <Home /> 
+            userData?.assistantName
+              ? <Home />
               : <Navigate to="/customize" />
-          } 
+          }
         />
 
         <Route path='/signup' element={!userData ? <Signup /> : <Navigate to="/" />} />
         <Route path='/signin' element={!userData ? <Signin /> : <Navigate to="/" />} />
+        <Route path='/welcome' element={userData ? <Welcome /> : <Navigate to="/signup" />} />
         <Route path='/customize' element={userData ? <Customize /> : <Navigate to="/signup" />} />
         <Route path='/customize2' element={userData ? <Customize2 /> : <Navigate to="/signup" />} />
         <Route path='/premium' element={userData ? <Premium /> : <Navigate to="/signin" />} />
@@ -50,6 +53,7 @@ function App() {
         <Route path='/contact' element={<Contact />} />
         <Route path='/history' element={userData ? <History /> : <Navigate to="/signin" />} />
         <Route path='/analytics' element={userData ? <Analytics /> : <Navigate to="/signin" />} />
+        <Route path='/youtube-downloader' element={userData ? <YouTubeDownloader /> : <Navigate to="/signin" />} />
       </Routes>
     </Suspense>
   )

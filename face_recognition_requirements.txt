@@ -1,0 +1,23 @@
+Face Recognition Implementation Requirements:
+
+1. Face-api.js Models:
+   - Download the following models from https://github.com/justadudewhohacks/face-api.js/tree/master/weights
+   - tiny_face_detector_model-weights_manifest.json and .bin files
+   - face_landmark_68_model-weights_manifest.json and .bin files
+   - face_recognition_model-weights_manifest.json and .bin files
+
+2. Model Placement:
+   - Place all model files in frontend/public/models/ directory
+   - Ensure the files are accessible at /models/ URL path
+
+3. Browser Compatibility:
+   - Requires modern browsers with WebRTC support for camera access
+   - HTTPS required for camera permissions in production
+
+4. No API Keys Required:
+   - Face-api.js works offline with local models
+   - No external API calls or keys needed
+
+5. Dependencies:
+   - face-api.js library (already installed via npm)
+   - Modern browser with getUserMedia support

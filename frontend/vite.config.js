@@ -4,6 +4,7 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   base: '/',   // ⭐ CRITICAL FIX FOR VERCEL DEPLOY
+  define: { 'process.env.NODE_ENV': '"development"' },
   plugins: [
     react(),
     tailwindcss(),

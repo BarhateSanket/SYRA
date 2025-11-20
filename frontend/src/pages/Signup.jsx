@@ -36,7 +36,7 @@ function SignUp() {
 
       setUserData(result.data)
       setLoading(false)
-      navigate("/customize")
+      navigate("/welcome")
 
     } catch (error) {
       console.log(error)

@@ -14,6 +14,7 @@ const sanitizeUser = (userDoc) => {
   delete user.password;
   delete user.twoFactorSecret;
   delete user.backupCodes;
+  delete user.faceEmbeddings;
   return user;
 };
 
@@ -21,43 +22,43 @@ const sanitizeUser = (userDoc) => {
    SIGNUP
 ----------------------------------------------------------- */
 export const signUp = async (req, res) => {
-  try {
-    const { name, email, password } = req.body;
+   try {
+     const { name, email, password } = req.body;
 
-    if (!name || !email || !password)
-      return res.status(400).json({ message: "Name, email and password are required" });
+     if (!name || !email || !password)
+       return res.status(400).json({ message: "Name, email and password are required" });
 
-    const existEmail = await User.findOne({ email });
-    if (existEmail)
-      return res.status(400).json({ message: "Email already exists" });
+     const existEmail = await User.findOne({ email });
+     if (existEmail)
+       return res.status(400).json({ message: "Email already exists" });
 
-    if (password.length < 6)
-      return res.status(400).json({ message: "Password must be 6+ characters" });
+     if (password.length < 6)
+       return res.status(400).json({ message: "Password must be 6+ characters" });
 
-    const hashedPassword = await bcrypt.hash(password, 10);
+     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const user = await User.create({
-      name,
-      email,
-      password: hashedPassword,
-    });
+     const user = await User.create({
+       name,
+       email,
+       password: hashedPassword,
+     });
 
-    const token = genToken(user._id);
+     const token = genToken(user._id);
 
-    res.cookie("token", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "none",
-      maxAge: 7 * 24 * 60 * 60 * 1000,
-      path: "/",
-    });
+     res.cookie("token", token, {
+       httpOnly: true,
+       secure: process.env.NODE_ENV === 'production',
+       sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+       maxAge: 7 * 24 * 60 * 60 * 1000,
+       path: "/",
+     });
 
-    return res.status(201).json(sanitizeUser(user));
-  } catch (error) {
-    logger.error("Signup error", error.message);
-    res.status(500).json({ message: "Signup failed" });
-  }
-};
+     return res.status(201).json(sanitizeUser(user));
+   } catch (error) {
+     logger.error("Signup error", error.message);
+     res.status(500).json({ message: "Signup failed" });
+   }
+ };
 
 /* -----------------------------------------------------------
    LOGIN (2FA-aware)
@@ -107,13 +108,21 @@ export const Login = async (req, res) => {
       });
     }
 
-    // No 2FA → normal login
+    // If face auth enabled → DO NOT LOGIN YET
+    if (user.faceAuthEnabled) {
+      return res.json({
+        requiresFaceAuth: true,
+        message: "Face verification required"
+      });
+    }
+
+    // No additional auth → normal login
     const token = genToken(user._id);
 
     res.cookie("token", token, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -133,8 +142,8 @@ export const logOut = async (req, res) => {
   try {
     res.clearCookie("token", {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
       path: "/",
     });
 
@@ -304,8 +313,8 @@ export const verifyLogin2FA = async (req, res) => {
 
     res.cookie("token", authToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: "none",
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1000,
       path: "/",
     });
@@ -321,5 +330,183 @@ export const verifyLogin2FA = async (req, res) => {
   } catch (error) {
     logger.error("2FA login verification error", error.message);
     res.status(500).json({ message: "Login verification failed" });
+  }
+};
+
+/* -----------------------------------------------------------
+// FACE AUTH FUNCTIONS
+----------------------------------------------------------- */
+
+/**
+ * Calculate Euclidean distance between two vectors
+ */
+const euclideanDistance = (a, b) => {
+  if (a.length !== b.length) return Infinity;
+  return Math.sqrt(a.reduce((sum, val, i) => sum + Math.pow(val - b[i], 2), 0));
+};
+
+/* -----------------------------------------------------------
+// ENROLL FACE
+----------------------------------------------------------- */
+export const enrollFace = async (req, res) => {
+  try {
+    const { embeddings } = req.body;
+
+    if (!embeddings || !Array.isArray(embeddings) || embeddings.length === 0) {
+      return res.status(400).json({ message: "Face embeddings are required" });
+    }
+
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Store the embeddings (replace existing ones for simplicity)
+    user.faceEmbeddings = [embeddings];
+    user.faceAuthEnabled = true;
+    await user.save();
+
+    logger.info("Face enrolled for user", user._id);
+
+    res.json({ message: "Face enrolled successfully" });
+
+  } catch (error) {
+    logger.error("Face enrollment error", error.message);
+    res.status(500).json({ message: "Face enrollment failed" });
+  }
+};
+
+/* -----------------------------------------------------------
+// VERIFY FACE
+----------------------------------------------------------- */
+export const verifyFace = async (req, res) => {
+  try {
+    const { embeddings } = req.body;
+
+    if (!embeddings || !Array.isArray(embeddings)) {
+      return res.status(400).json({ message: "Face embeddings are required" });
+    }
+
+    const user = await User.findById(req.userId).select("+faceEmbeddings +faceAuthEnabled");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.faceAuthEnabled || !user.faceEmbeddings || user.faceEmbeddings.length === 0) {
+      return res.status(400).json({ message: "Face authentication not enabled" });
+    }
+
+    // Compare with stored embeddings
+    let minDistance = Infinity;
+    for (const storedEmbedding of user.faceEmbeddings) {
+      const distance = euclideanDistance(embeddings, storedEmbedding);
+      if (distance < minDistance) {
+        minDistance = distance;
+      }
+    }
+
+    // Threshold for match (adjust as needed, lower is stricter)
+    const threshold = 0.6;
+
+    if (minDistance <= threshold) {
+      res.json({ verified: true, message: "Face verified successfully" });
+    } else {
+      res.json({ verified: false, message: "Face verification failed" });
+    }
+
+  } catch (error) {
+    logger.error("Face verification error", error.message);
+    res.status(500).json({ message: "Face verification failed" });
+  }
+};
+
+/* -----------------------------------------------------------
+// VERIFY LOGIN FACE (final login step)
+----------------------------------------------------------- */
+export const verifyLoginFace = async (req, res) => {
+  try {
+    const { embeddings } = req.body;
+
+    if (!embeddings || !Array.isArray(embeddings)) {
+      return res.status(400).json({ message: "Face embeddings are required" });
+    }
+
+    const user = await User.findById(req.userId).select("+faceEmbeddings +faceAuthEnabled");
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!user.faceAuthEnabled || !user.faceEmbeddings || user.faceEmbeddings.length === 0) {
+      return res.status(400).json({ message: "Face authentication not enabled" });
+    }
+
+    // Compare with stored embeddings
+    let minDistance = Infinity;
+    for (const storedEmbedding of user.faceEmbeddings) {
+      const distance = euclideanDistance(embeddings, storedEmbedding);
+      if (distance < minDistance) {
+        minDistance = distance;
+      }
+    }
+
+    // Threshold for match
+    const threshold = 0.6;
+
+    if (minDistance > threshold) {
+      return res.status(400).json({ message: "Face verification failed" });
+    }
+
+    // Issue login token finally
+    const authToken = genToken(user._id);
+
+    res.cookie("token", authToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    return res.json({
+      message: "Login successful",
+      user: sanitizeUser(user)
+    });
+
+  } catch (error) {
+    logger.error("Face login verification error", error.message);
+    res.status(500).json({ message: "Login verification failed" });
+  }
+};
+
+/* -----------------------------------------------------------
+// TOGGLE FACE AUTH
+----------------------------------------------------------- */
+export const toggleFaceAuth = async (req, res) => {
+  try {
+    const { enabled } = req.body;
+
+    const user = await User.findById(req.userId);
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    user.faceAuthEnabled = enabled;
+    if (!enabled) {
+      user.faceEmbeddings = [];
+    }
+    await user.save();
+
+    res.json({ message: `Face authentication ${enabled ? 'enabled' : 'disabled'}` });
+
+  } catch (error) {
+    logger.error("Toggle face auth error", error.message);
+    res.status(500).json({ message: "Failed to toggle face authentication" });
   }
 };

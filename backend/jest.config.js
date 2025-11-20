@@ -16,7 +16,7 @@ const config = {
     '^.+\\.js$': 'babel-jest',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(supertest)/)',
+    'node_modules/(?!(supertest|mongoose)/)',
   ],
 }
 

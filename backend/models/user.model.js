@@ -20,9 +20,10 @@ const userSchema = new mongoose.Schema({
      assistantImage:{
         type:String
     },
-    history:[
-        {type:String}
-    ],
+    history: [{
+        command: { type: String },
+        timestamp: { type: Date, default: Date.now }
+    }],
     // Subscription related fields
     subscriptionStatus: {
         type: String,
@@ -90,6 +91,15 @@ const userSchema = new mongoose.Schema({
     backupCodes: [{
         type: String,
         select: false
+    }],
+    // Face recognition fields
+    faceAuthEnabled: {
+        type: Boolean,
+        default: false
+    },
+    faceEmbeddings: [{
+        type: [Number],
+        default: []
     }],
     // Security tracking
     lastLoginAt: {

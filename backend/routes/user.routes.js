@@ -28,18 +28,16 @@ const userRouter = express.Router();
  * @swagger
  * /api/user/current:
  *   get:
- *     summary: Get current authenticated user
+ *     summary: Get current authenticated user or null if not authenticated
  *     tags: [User]
  *     security:
  *       - bearerAuth: []
  *       - cookieAuth: []
  *     responses:
  *       200:
- *         description: User data retrieved successfully
- *       401:
- *         description: Unauthorized
+ *         description: User data retrieved successfully or null
  */
-userRouter.get("/current", isAuth, getCurrentUser);
+userRouter.get("/current", getCurrentUser);
 
 /**
  * @swagger

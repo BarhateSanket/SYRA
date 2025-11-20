@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from 'react'
+import React, { useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { UserDataContext } from '../ContextApi/UserContext'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
@@ -13,6 +13,7 @@ import ProgressBar from '../components/ProgressBar'
 import Header from '../components/Header'
 import VoiceControls from '../components/VoiceControls'
 import commandCache from '../components/CommandCache'
+import commandParser from '../components/CommandParser'
 import useWakeWord from '../hooks/useWakeWord'
 import useTouchGestures from '../hooks/useTouchGestures'
 function Home() {
@@ -25,14 +26,198 @@ function Home() {
    const recognitionRef=useRef(null)
    const [ham,setHam]=useState(false)
    const isRecognizingRef=useRef(false)
-   const synth=window.speechSynthesis
-   const [toast, setToast] = useState(null)
-   const [processingProgress, setProcessingProgress] = useState(0)
-   const [isProcessing, setIsProcessing] = useState(false)
-   const [showVoiceSettings, setShowVoiceSettings] = useState(false)
-   const [voiceSettings, setVoiceSettings] = useState(() => {
-     return JSON.parse(localStorage.getItem('syraVoiceSettings') || '{"voice": "hi-IN-male", "gender": "male", "rate": 1, "pitch": 1, "volume": 1}')
+  const synth=window.speechSynthesis
+  const [toast, setToast] = useState(null)
+  const [processingProgress, setProcessingProgress] = useState(0)
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [showVoiceSettings, setShowVoiceSettings] = useState(false)
+  const [voiceSettings, setVoiceSettings] = useState(() => {
+     return JSON.parse(localStorage.getItem('syraVoiceSettings') || '{"voice": "en-US-male", "gender": "male", "rate": 1, "pitch": 1, "volume": 1}')
    })
+  const [audioUnlocked, setAudioUnlocked] = useState(false)
+  const [userActivated, setUserActivated] = useState(false)
+  const [speechSynthesisAllowed, setSpeechSynthesisAllowed] = useState(false)
+  const [lastResponseText, setLastResponseText] = useState("")
+  const [speechSupported, setSpeechSupported] = useState(true)
+  const [permissionGranted, setPermissionGranted] = useState(false)
+  const [voicesLoaded, setVoicesLoaded] = useState(false)
+
+  // Enhanced Audio unlock function - required for browsers to allow audio playback
+  const unlockAudio = useCallback(async (maxRetries = 3) => {
+    if (audioUnlocked) {
+      console.log('🔊 Audio already unlocked, skipping...');
+      return true;
+    }
+
+    console.log('🔊 Attempting to unlock audio... (max retries:', maxRetries, ')');
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      console.log(`🔄 Audio unlock attempt ${attempt}/${maxRetries}`);
+
+      try {
+        // Create a silent audio context to unlock Web Audio API
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContextClass) {
+          throw new Error('AudioContext not supported');
+        }
+
+        const audioContext = new AudioContextClass();
+        console.log('🎵 Audio context created, state:', audioContext.state);
+
+        // Create a silent buffer and play it to unlock audio
+        const buffer = audioContext.createBuffer(1, 1, 22050);
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+
+        // Promise to handle the unlock attempt with timeout
+        const unlockPromise = new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            console.warn('⏰ Audio unlock timeout');
+            source.stop();
+            reject(new Error('Unlock timeout'));
+          }, 2000);
+
+          source.onended = () => {
+            clearTimeout(timeout);
+            console.log('🔊 Silent audio played successfully');
+            resolve();
+          };
+
+          source.onerror = (error) => {
+            clearTimeout(timeout);
+            console.error('❌ Error playing silent audio:', error);
+            reject(error);
+          };
+
+          source.start();
+        });
+
+        await unlockPromise;
+
+        // Resume audio context if suspended
+        if (audioContext.state === 'suspended') {
+          console.log('⏸️ Audio context suspended, attempting to resume...');
+          await audioContext.resume();
+          console.log('▶️ Audio context resumed, new state:', audioContext.state);
+        }
+
+        // Additional unlock attempts for stubborn browsers
+        if (audioContext.state !== 'running') {
+          console.log('🔄 Audio context not running, trying additional unlock methods...');
+
+          // Try creating and immediately closing another context
+          try {
+            const tempContext = new AudioContextClass();
+            await tempContext.resume();
+            await tempContext.close();
+            console.log('🔄 Temporary context created and closed for unlock');
+          } catch (tempError) {
+            console.warn('⚠️ Temporary context unlock failed:', tempError);
+          }
+
+          // Try playing a very short audio buffer
+          try {
+            const shortBuffer = audioContext.createBuffer(1, 100, 22050);
+            const shortSource = audioContext.createBufferSource();
+            shortSource.buffer = shortBuffer;
+            shortSource.connect(audioContext.destination);
+            shortSource.start();
+            console.log('🔄 Short buffer played for additional unlock');
+          } catch (shortError) {
+            console.warn('⚠️ Short buffer unlock failed:', shortError);
+          }
+        }
+
+        // Final check
+        if (audioContext.state === 'running') {
+          console.log('✅ Audio context running after attempt', attempt);
+          setAudioUnlocked(true);
+          console.log('✅ Audio unlocked successfully on attempt', attempt);
+          return true;
+        } else {
+          console.warn('⚠️ Audio context still not running after attempt', attempt, ':', audioContext.state);
+          if (attempt < maxRetries) {
+            console.log('⏳ Waiting before next attempt...');
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        // Clean up
+        try {
+          await audioContext.close();
+        } catch (closeError) {
+          console.warn('⚠️ Error closing audio context:', closeError);
+        }
+
+      } catch (error) {
+        console.error(`❌ Audio unlock attempt ${attempt} failed:`, error);
+        if (attempt < maxRetries) {
+          console.log('⏳ Waiting before next attempt...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+
+    // All attempts failed
+    console.error('❌ Failed to unlock audio after', maxRetries, 'attempts');
+    setToast({
+      message: "Audio unlock failed. Speech may not work properly. Try clicking anywhere on the page or refreshing.",
+      type: "warning"
+    });
+
+    // Try one final time after user interaction
+    const handleUserInteraction = async () => {
+      if (!audioUnlocked) {
+        console.log('🔄 Final audio unlock attempt after user interaction...');
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            const audioContext = new AudioContextClass();
+            if (audioContext.state === 'suspended') {
+              await audioContext.resume();
+            }
+            if (audioContext.state === 'running') {
+              setAudioUnlocked(true);
+              console.log('✅ Audio unlocked on final attempt after user interaction');
+            }
+          }
+        } catch (finalError) {
+          console.error('❌ Final audio unlock attempt failed:', finalError);
+        }
+      }
+      // Remove listeners after first interaction
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    };
+
+    window.addEventListener('click', handleUserInteraction);
+    window.addEventListener('keydown', handleUserInteraction);
+    window.addEventListener('touchstart', handleUserInteraction);
+
+    // Clean up listeners after 30 seconds
+    setTimeout(() => {
+      window.removeEventListener('click', handleUserInteraction);
+      window.removeEventListener('keydown', handleUserInteraction);
+      window.removeEventListener('touchstart', handleUserInteraction);
+    }, 30000);
+
+    return false;
+  }, [audioUnlocked]);
+
+  // User activation detection for speech synthesis
+  useEffect(() => {
+    const activate = () => setUserActivated(true);
+    window.addEventListener('click', activate);
+    window.addEventListener('keydown', activate);
+    window.addEventListener('touchstart', activate);
+    return () => {
+      window.removeEventListener('click', activate);
+      window.removeEventListener('keydown', activate);
+      window.removeEventListener('touchstart', activate);
+    };
+  }, []);
 
   // Wake word and touch gesture hooks
   const { isListening: wakeWordActive, startListening: startWakeWord, stopListening: stopWakeWord, updateSensitivity } = useWakeWord()
@@ -43,6 +228,27 @@ function Home() {
     onDoubleTap: () => testVoice(),
     onLongPress: () => setListening(!listening)
   })
+
+  // Load voices
+  useEffect(() => {
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices()
+      if (voices.length > 0) {
+        setVoicesLoaded(true)
+      }
+    }
+
+    loadVoices()
+    if (window.speechSynthesis.onvoiceschanged !== undefined) {
+      window.speechSynthesis.onvoiceschanged = loadVoices
+    }
+
+    return () => {
+      if (window.speechSynthesis.onvoiceschanged !== undefined) {
+        window.speechSynthesis.onvoiceschanged = null
+      }
+    }
+  }, [])
 
   const handleLogOut=async ()=>{
     try {
@@ -70,11 +276,27 @@ function Home() {
     
   }
 
-  const speak=(text)=>{
-    // Check if speech synthesis is supported and allowed
+  const speak=async (text)=>{
+    console.log('🎤 Speak function called with text:', text);
+    setLastResponseText(text); // Store the response text for manual retry
+
+    // Check if running on HTTP (localhost) - speech synthesis may be restricted
+    if (window.location.protocol === 'http:' && window.location.hostname === 'localhost') {
+      console.warn("⚠️ Running on HTTP localhost - speech synthesis may be restricted by browser");
+      setToast({
+        message: "Voice may not work on localhost HTTP. Try using HTTPS or deploy to a server.",
+        type: "warning"
+      });
+    }
+
+    // Check if speech synthesis is supported
     if (!('speechSynthesis' in window)) {
-      console.warn("Speech synthesis not supported");
+      console.warn("❌ Speech synthesis not supported");
       setAiText(text);
+      setToast({
+        message: "Speech synthesis not supported on this device.",
+        type: "warning"
+      });
       setTimeout(() => {
         setAiText("");
         setTimeout(() => {
@@ -84,38 +306,59 @@ function Home() {
       return;
     }
 
-    // Check if we have user activation (required for speech synthesis)
-    if (!document.hasFocus && !listening) {
-      console.warn("Speech synthesis blocked: no user activation");
-      setAiText(text);
-      setTimeout(() => {
-        setAiText("");
-        setTimeout(() => {
-          startRecognition();
-        }, 800);
-      }, 2000);
-      return;
-    }
+    console.log('✅ Speech synthesis supported, attempting to unlock audio...');
 
+    // Try to unlock audio context first
+    const audioUnlockedResult = await unlockAudio();
+    console.log('🔊 Audio unlock result:', audioUnlockedResult);
+
+    // Set user activated since voice recognition counts as interaction
+    setUserActivated(true);
+    console.log('👤 User activated set to true (voice recognition interaction)');
+
+    console.log('✅ Speech synthesis allowed, creating utterance...');
     const utterance = new SpeechSynthesisUtterance(text);
+    console.log('📝 Utterance created with text length:', text.length);
 
     // Parse voice setting to get language and gender preference
     const [lang, gender] = voiceSettings.voice.split('-');
     const voiceLang = lang + (lang.includes('-') ? '' : '-' + (lang === 'en' ? 'US' : 'IN'));
+    console.log('🌐 Voice language parsed:', voiceLang, 'gender:', gender);
 
     utterance.lang = voiceLang;
     // Special handling for Hindi male to sound like English UK male
     if (voiceSettings.voice === 'hi-IN-male') {
       utterance.rate = Math.max(0.5, voiceSettings.rate * 0.6); // Much slower like UK English
       utterance.pitch = Math.max(0, voiceSettings.pitch * 0.5); // Much lower pitch
+      console.log('🇮🇳 Special Hindi male voice settings applied - rate:', utterance.rate, 'pitch:', utterance.pitch);
     } else {
       utterance.rate = gender === 'male' ? Math.max(0.5, voiceSettings.rate * 0.8) : voiceSettings.rate * 1.1;
       utterance.pitch = gender === 'male' ? Math.max(0, voiceSettings.pitch * 0.7) : voiceSettings.pitch * 1.3;
+      console.log('⚙️ Standard voice settings applied - rate:', utterance.rate, 'pitch:', utterance.pitch);
     }
     utterance.volume = voiceSettings.volume;
+    console.log('🔊 Utterance volume set to:', utterance.volume);
+
+    // Wait for voices to load if not loaded yet
+    if (!voicesLoaded) {
+      console.log('🎤 Voices not loaded yet, waiting...');
+      await new Promise(resolve => {
+        const checkVoices = () => {
+          const v = window.speechSynthesis.getVoices();
+          if (v.length > 0) {
+            setVoicesLoaded(true);
+            resolve();
+          } else {
+            setTimeout(checkVoices, 100);
+          }
+        };
+        checkVoices();
+      });
+    }
 
     // Try to find the preferred voice based on language and gender
     const voices = window.speechSynthesis.getVoices();
+    console.log('🎤 Available voices count:', voices.length);
     let selectedVoice = null;
 
     // First try to find voice matching exact language and gender preference
@@ -124,27 +367,55 @@ function Home() {
       ((gender === 'male' && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man'))) ||
        (gender === 'female' && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('girl'))))
     );
+    console.log('🔍 First pass voice selection result:', selectedVoice ? selectedVoice.name : 'none');
 
     // If no exact match, try to find any voice for the language
     if (!selectedVoice) {
       selectedVoice = voices.find(v => v.lang === voiceLang) ||
-                     voices.find(v => v.lang.startsWith(lang));
+                      voices.find(v => v.lang.startsWith(lang));
+      console.log('🔍 Second pass voice selection result:', selectedVoice ? selectedVoice.name : 'none');
     }
 
     // Final fallback to any available voice
     if (!selectedVoice) {
       selectedVoice = voices.find(v => v.lang === 'hi-IN') ||
-                     voices.find(v => v.lang === 'en-US') ||
-                     voices[0];
+                      voices.find(v => v.lang === 'en-US') ||
+                      voices[0];
+      console.log('🔍 Fallback voice selection result:', selectedVoice ? selectedVoice.name : 'none');
     }
 
-    if (selectedVoice) {
-      utterance.voice = selectedVoice;
-      console.log("Selected voice:", selectedVoice.name, "for language:", voiceLang, "gender:", gender);
-    }
+    // For debugging, try using default voice instead of selected
+    // if (selectedVoice) {
+    //   utterance.voice = selectedVoice;
+    //   console.log("✅ Selected voice:", selectedVoice.name, "for language:", voiceLang, "gender:", gender);
+    // } else {
+    //   console.warn('⚠️ No suitable voice found, using default');
+    // }
+    console.log('🎤 Using default voice for speech synthesis');
+
+    let speechStarted = false;
+    utterance.onstart = () => {
+      console.log('🎤 Speech synthesis started');
+      speechStarted = true;
+    };
 
     isSpeakingRef.current = true;
+
+    // Timeout to check if speech actually started
+    const speechTimeout = setTimeout(() => {
+      if (!speechStarted) {
+        console.warn('⚠️ Speech synthesis did not start within timeout - voice may not be working');
+        setToast({
+          message: "Voice synthesis may not be working. Check browser audio settings or try refreshing the page.",
+          type: "warning"
+        });
+      }
+    }, 1000);
+
     utterance.onend = () => {
+      clearTimeout(speechTimeout);
+      console.log('✅ Speech synthesis completed successfully');
+      setSpeechSynthesisAllowed(true); // Mark as allowed after successful speech
       setAiText("");
       isSpeakingRef.current = false;
       setTimeout(() => {
@@ -153,6 +424,20 @@ function Home() {
     };
 
     utterance.onerror = (error) => {
+      // Handle "interrupted" as normal (user spoke again)
+      if (error.error === 'interrupted') {
+        console.log("Speech was interrupted (normal if user spoke again)");
+        setAiText(text);
+        setTimeout(() => {
+          setAiText("");
+          isSpeakingRef.current = false;
+          setTimeout(() => {
+            startRecognition();
+          }, 800);
+        }, 1000);
+        return;
+      }
+
       console.warn("Speech synthesis error:", error);
 
       // Show user-friendly error message for speech issues
@@ -188,6 +473,7 @@ function Home() {
 
     // Only speak if we have user activation (after user interaction)
     try {
+      console.log('🎤 Attempting to speak text:', text, 'with voice:', utterance.voice?.name || 'default', 'rate:', utterance.rate, 'pitch:', utterance.pitch, 'volume:', utterance.volume);
       synth.speak(utterance);
     } catch (error) {
       console.warn("Speech synthesis failed:", error);
@@ -384,8 +670,15 @@ useEffect(() => {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
     console.error("Speech recognition not supported");
+    setSpeechSupported(false);
+    setToast({
+      message: "Speech recognition not supported in this browser. Try Chrome or Edge.",
+      type: "warning"
+    });
     return;
   }
+
+  setSpeechSupported(true);
 
   const recognition = new SpeechRecognition();
 
@@ -875,54 +1168,7 @@ useEffect(() => {
     }
   };
 
-  // Speak greeting only if userData is available
-  if (userData?.name) {
-    const greeting = new SpeechSynthesisUtterance(`Hey boss, tell me what should I do?`);
-    // Use the selected voice settings for greeting
-    const [lang, gender] = voiceSettings.voice.split('-');
-    const voiceLang = lang + (lang.includes('-') ? '' : '-' + (lang === 'en' ? 'US' : 'IN'));
 
-    greeting.lang = voiceLang;
-    // Special handling for Hindi male to sound like English UK male
-    if (voiceSettings.voice === 'hi-IN-male') {
-      greeting.rate = Math.max(0.5, voiceSettings.rate * 0.6); // Much slower like UK English
-      greeting.pitch = Math.max(0, voiceSettings.pitch * 0.5); // Much lower pitch
-    } else {
-      greeting.rate = gender === 'male' ? Math.max(0.5, voiceSettings.rate * 0.8) : voiceSettings.rate * 1.1;
-      greeting.pitch = gender === 'male' ? Math.max(0, voiceSettings.pitch * 0.7) : voiceSettings.pitch * 1.3;
-    }
-    greeting.volume = voiceSettings.volume;
-
-    // Try to find the preferred voice based on language and gender
-    const voices = window.speechSynthesis.getVoices();
-    let selectedVoice = null;
-
-    // First try to find voice matching exact language and gender preference
-    selectedVoice = voices.find(v =>
-      v.lang === voiceLang &&
-      ((gender === 'male' && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('man'))) ||
-       (gender === 'female' && (v.name.toLowerCase().includes('female') || v.name.toLowerCase().includes('woman') || v.name.toLowerCase().includes('girl'))))
-    );
-
-    // If no exact match, try to find any voice for the language
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.lang === voiceLang) ||
-                     voices.find(v => v.lang.startsWith(lang));
-    }
-
-    // Final fallback to any available voice
-    if (!selectedVoice) {
-      selectedVoice = voices.find(v => v.lang === 'hi-IN') ||
-                     voices.find(v => v.lang === 'en-US') ||
-                     voices[0];
-    }
-
-    if (selectedVoice) {
-      greeting.voice = selectedVoice;
-    }
-
-    window.speechSynthesis.speak(greeting);
-  }
 
   return () => {
     isMounted = false;
@@ -1210,14 +1456,15 @@ useEffect(() => {
             <FaBrain className='text-sm' />
             Customize Assistant
           </button>
-          <button className='w-full h-[50px] text-black font-semibold bg-gradient-to-r from-blue-400 to-purple-400 hover:from-blue-500 hover:to-purple-500 rounded-full cursor-pointer text-[16px] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2' onClick={()=>navigate("/profile")}>
+          {/* Profile and Settings pages not implemented yet */}
+          {/* <button className='w-full h-[50px] text-black font-semibold bg-gradient-to-r from-blue-400 to-purple-400 hover:from-blue-500 hover:to-purple-500 rounded-full cursor-pointer text-[16px] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2' onClick={()=>navigate("/profile")}>
             <FaStar className='text-sm' />
             My Profile
           </button>
           <button className='w-full h-[50px] text-black font-semibold bg-gradient-to-r from-green-400 to-blue-400 hover:from-green-500 hover:to-blue-500 rounded-full cursor-pointer text-[16px] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2' onClick={()=>navigate("/settings")}>
             <FaShieldAlt className='text-sm' />
             Settings
-          </button>
+          </button> */}
           <button className='w-full h-[50px] text-black font-semibold bg-gradient-to-r from-cyan-400 to-blue-400 hover:from-cyan-500 hover:to-blue-500 rounded-full cursor-pointer text-[16px] shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2' onClick={()=>navigate("/legal")}>
             <FaShieldAlt className='text-sm' />
             Legal & Compliance
@@ -1232,7 +1479,9 @@ useEffect(() => {
         <h1 className='text-white font-semibold text-[17px] sm:text-[19px] bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent'>Command History</h1>
         <div className='w-full h-[250px] sm:h-[300px] gap-[15px] overflow-y-auto flex flex-col'>
           {userData.history?.map((his, index)=>(
-            <div key={index} className='text-gray-300 text-[14px] sm:text-[16px] w-full p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-200'>{his}</div>
+            <div key={index} className='text-gray-300 text-[14px] sm:text-[16px] w-full p-3 bg-white/5 backdrop-blur-sm rounded-lg border border-white/10 hover:bg-white/10 transition-all duration-200'>
+              {typeof his === 'string' ? his : his.command}
+            </div>
           ))}
         </div>
       </div>
@@ -1283,9 +1532,18 @@ useEffect(() => {
       {/* Enhanced Status indicator */}
       <div className='flex flex-col items-center gap-3 relative z-20'>
         <div className='flex items-center gap-2 sm:gap-3 bg-black/20 dark:bg-black/20 light:bg-white/20 backdrop-blur-lg rounded-full px-3 sm:px-4 py-2 border border-white/10 dark:border-white/10 light:border-gray-200/50'>
-          <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${listening ? 'bg-red-500 animate-pulse shadow-red-500/50 shadow-lg' : 'bg-green-500 shadow-green-500/50 shadow-lg'} transition-all duration-300`}></div>
+          <div className={`w-3 h-3 sm:w-4 sm:h-4 rounded-full ${
+            !speechSupported ? 'bg-gray-500' :
+            listening ? 'bg-red-500 animate-pulse shadow-red-500/50 shadow-lg' :
+            'bg-green-500 shadow-green-500/50 shadow-lg'
+          } transition-all duration-300`}></div>
           <span className='text-white/80 dark:text-white/80 light:text-gray-600 text-xs sm:text-sm font-medium flex items-center gap-2'>
-            {listening ? (
+            {!speechSupported ? (
+              <>
+                <FaMicrophoneSlash className='text-gray-400 text-sm sm:text-base' />
+                Not Supported
+              </>
+            ) : listening ? (
               <>
                 <FaMicrophone className='text-red-400 animate-pulse text-sm sm:text-base' />
                 <span className='hidden sm:inline'>Listening...</span>
@@ -1315,6 +1573,59 @@ useEffect(() => {
             Cache: {commandCache.getStats().size} items
           </span>
         </div>
+
+        {/* Manual Speak Response Button */}
+        {(aiText || lastResponseText) && (
+          <button
+            onClick={() => speak(lastResponseText || aiText)}
+            className='bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm flex items-center gap-2'
+          >
+            <FaMicrophone className='text-sm' />
+            {aiText ? 'Repeat Response' : 'Speak Last Response'}
+          </button>
+        )}
+
+        {/* Manual Start Listening Button */}
+        {speechSupported && !listening && (
+          <button
+            onClick={() => {
+              if (recognitionRef.current) {
+                try {
+                  recognitionRef.current.start();
+                  setToast({ message: "Started listening! Say your assistant's name to begin.", type: "success" });
+                } catch (e) {
+                  console.error("Manual start failed:", e);
+                  setToast({ message: "Failed to start listening. Check microphone permissions.", type: "error" });
+                }
+              }
+            }}
+            className='bg-gradient-to-r from-green-400 to-blue-400 hover:from-green-500 hover:to-blue-500 text-white font-semibold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm flex items-center gap-2'
+          >
+            <FaMicrophone className='text-sm' />
+            Start Listening
+          </button>
+        )}
+
+        {/* Test Voice Button */}
+        {voicesLoaded && (
+          <button
+            onClick={() => testVoice("Hello! I am your AI assistant. How can I help you today?")}
+            className='bg-gradient-to-r from-purple-400 to-pink-400 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2 px-4 rounded-full transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl text-sm flex items-center gap-2'
+          >
+            <FaMicrophone className='text-sm' />
+            Test Voice
+          </button>
+        )}
+
+        {/* Browser Support Warning */}
+        {!speechSupported && (
+          <div className='bg-yellow-500/20 border border-yellow-500/50 rounded-lg p-3 text-center'>
+            <p className='text-yellow-300 text-sm'>
+              Speech recognition not supported in this browser.
+              Please use Chrome, Edge, or Safari for best experience.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Toast Notifications */}

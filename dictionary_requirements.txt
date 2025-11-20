@@ -1,0 +1,28 @@
+Dictionary Integration Requirements
+====================================
+
+Merriam-Webster Collegiate Dictionary API
+------------------------------------------
+- API Provider: Merriam-Webster
+- API Endpoint: https://dictionaryapi.com/api/v3/references/collegiate/json/
+- API Key Required: Yes
+- Signup URL: https://dictionaryapi.com/
+- Pricing: Free tier available (limited requests), paid plans for higher limits
+- Documentation: https://dictionaryapi.com/products/api-collegiate-dictionary
+
+To get started:
+1. Visit https://dictionaryapi.com/
+2. Create a developer account
+3. Register for the Collegiate Dictionary API
+4. Obtain your API key
+5. Add the API key to backend/config/dictionary.js as DICTIONARY_API_KEY
+
+Rate Limits:
+- Free tier: 1,000 requests per day
+- Implement proper error handling for rate limit exceeded responses
+
+Spell Checking Libraries:
+- nodehun: Node.js spell checking library (requires dictionary files)
+- fuse.js: Fuzzy string matching for suggestions
+
+No additional API keys required for spell checking functionality.

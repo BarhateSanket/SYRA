@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ path: './.env' });
 
 import connectDb from "./config/db.js";
 import cors from "cors";
@@ -14,12 +14,15 @@ import githubRouter from "./routes/github.routes.js";
 import weatherRouter from "./routes/weather.routes.js";
 import newsRouter from "./routes/news.routes.js";
 import stocksRouter from "./routes/stocks.routes.js";
+import youtubeRouter from "./routes/youtube.routes.js";
+import youtubeDownloadRouter from "./routes/youtubeDownload.routes.js";
 import remindersRouter from "./routes/reminders.routes.js";
 import smartHomeRouter from "./routes/smartHome.routes.js";
 import healthRouter from "./routes/health.routes.js";
 import monitoringRouter from "./routes/monitoring.routes.js";
 import analyticsRouter from "./routes/analytics.routes.js";
 import metricsRouter from "./routes/metrics.routes.js";
+import dictionaryRouter from "./routes/dictionary.routes.js";
 
 // ES Routers
 import currencyRouter from "./routes/currency.routes.js";
@@ -77,7 +80,7 @@ app.use(rateLimiter);
 // CORS
 app.use(
   cors({
-    origin: ["http://localhost:5173", "https://syra-ai-voice.vercel.app"],
+    origin: ["http://localhost:5173", "http://localhost:5174", "https://syra-ai-voice.vercel.app"],
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -100,6 +103,8 @@ app.use("/api/github", githubRouter);
 app.use("/api/weather", weatherRouter);
 app.use("/api/news", newsRouter);
 app.use("/api/stocks", stocksRouter);
+app.use("/api/youtube", youtubeRouter);
+app.use("/api/youtube/download", youtubeDownloadRouter);
 app.use("/api/currency", currencyRouter);
 app.use("/api/units", unitConversionRouter);
 app.use("/api/reminders", remindersRouter);
@@ -107,6 +112,7 @@ app.use("/api/smarthome", smartHomeRouter);
 app.use("/api/health", healthRouter);
 app.use("/api/monitoring", monitoringRouter);
 app.use("/api/analytics", analyticsRouter);
+app.use("/api/dictionary", dictionaryRouter);
 
 // FIXED: Metrics router MUST be mounted with a base path
 app.use("/api", metricsRouter);
@@ -118,7 +124,7 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(specs));
 app.use(errorHandler);
 
 // Start Server
-const port = process.env.PORT || 5000;
+const port = process.env.PORT || 8000;
 
 app.listen(port, () => {
   connectDb();

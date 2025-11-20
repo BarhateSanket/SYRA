@@ -4,6 +4,8 @@ import axios from 'axios'
 import { MdKeyboardBackspace } from "react-icons/md";
 import { FaPlay, FaCheck, FaArrowRight, FaArrowLeft } from "react-icons/fa";
 import { useNavigate } from 'react-router-dom';
+import FaceEnrollment from '../components/FaceEnrollment';
+import Toast from '../components/Toast';
 
 function Customize2() {
 
@@ -27,6 +29,9 @@ function Customize2() {
 
     const [selectedVoice, setSelectedVoice] = useState(voiceSettings.voice)
     const [isPlaying, setIsPlaying] = useState(false)
+    const [faceAuthEnabled, setFaceAuthEnabled] = useState(userData?.faceAuthEnabled || false)
+    const [showFaceEnrollment, setShowFaceEnrollment] = useState(false)
+    const [toast, setToast] = useState(null)
 
     // -----------------------------
     // IMAGE HANDLING
@@ -117,27 +122,29 @@ function Customize2() {
             // Upload only if NEW image was chosen
             if (uploadFile instanceof File) {
                 formData.append("assistantImage", uploadFile)
+            } else if (typeof previewUrl === "string") {
+                // For predefined images, send the URL
+                formData.append("imageUrl", previewUrl)
             }
 
             const result = await axios.post(
                 `${serverUrl}/api/user/update`,
                 formData,
                 {
-                    withCredentials: true,
-                    headers: { "Content-Type": "multipart/form-data" }
+                    withCredentials: true
                 }
             )
 
             setUserData(result.data)
             localStorage.setItem("syraVoiceSettings", JSON.stringify(voiceSettings))
 
-            navigate("/")
-
         } catch (err) {
             console.log("Update error:", err.response?.data || err.message)
+            setToast({ message: "Failed to update assistant settings. Image upload may have failed.", type: "error" })
         }
 
         setLoading(false)
+        navigate("/")
     }
 
     const nextStep = () => {
@@ -149,6 +156,19 @@ function Customize2() {
     }
 
     const prevStep = () => setCurrentStep(prev => Math.max(1, prev - 1))
+
+    const toggleFaceAuth = async () => {
+        try {
+            const response = await axios.post(`${serverUrl}/api/auth/toggle-face-auth`, {
+                enabled: !faceAuthEnabled
+            }, { withCredentials: true });
+
+            setFaceAuthEnabled(!faceAuthEnabled);
+            setUserData(prev => ({ ...prev, faceAuthEnabled: !faceAuthEnabled }));
+        } catch (error) {
+            console.error('Toggle face auth error:', error);
+        }
+    }
 
     return (
         <div className='w-full min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex justify-center items-center flex-col p-[20px]'>
@@ -261,6 +281,31 @@ function Customize2() {
                             ))}
                         </div>
 
+                        {/* Face Authentication Settings */}
+                        <div className='mt-8 p-4 bg-white/5 rounded-2xl border border-white/10'>
+                            <h3 className='text-white text-xl mb-4'>Face Authentication</h3>
+                            <div className='flex items-center justify-between mb-4'>
+                                <span className='text-white/80'>Enable Face Login</span>
+                                <button
+                                    onClick={toggleFaceAuth}
+                                    className={`w-12 h-6 rounded-full transition-colors ${faceAuthEnabled ? 'bg-purple-400' : 'bg-white/20'}`}
+                                >
+                                    <div className={`w-5 h-5 bg-white rounded-full transition-transform ${faceAuthEnabled ? 'translate-x-6' : 'translate-x-0.5'}`}></div>
+                                </button>
+                            </div>
+                            {faceAuthEnabled && (
+                                <div className='text-center'>
+                                    <p className='text-white/60 mb-4'>Enroll your face for authentication</p>
+                                    <button
+                                        onClick={() => setShowFaceEnrollment(true)}
+                                        className='px-6 py-2 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors'
+                                    >
+                                        Enroll Face
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+
                         <div className='flex gap-4 justify-center'>
                             <button
                                 onClick={prevStep}
@@ -281,6 +326,25 @@ function Customize2() {
                 )}
 
             </div>
+
+            {/* Face Enrollment Modal */}
+            {showFaceEnrollment && (
+                <div className='fixed inset-0 bg-black/50 flex items-center justify-center z-50'>
+                    <FaceEnrollment
+                        onSuccess={() => setShowFaceEnrollment(false)}
+                        onCancel={() => setShowFaceEnrollment(false)}
+                    />
+                </div>
+            )}
+
+            {/* Toast Notification */}
+            {toast && (
+                <Toast
+                    message={toast.message}
+                    type={toast.type}
+                    onClose={() => setToast(null)}
+                />
+            )}
         </div>
     )
 }
